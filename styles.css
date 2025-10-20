@@ -29,6 +29,8 @@ body {
     align-items: center;
     min-height: 100vh;
     padding: 20px;
+    flex-direction: column; /* stack header above login card */
+    gap: 20px;
 }
 
 .login-header {
@@ -921,6 +923,13 @@ tr:hover {
     .user-cards-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Extra small devices: tighten spacing on login layout */
+@media (max-width: 480px) {
+    .login-header h1 { font-size: 2rem; }
+    .login-header p { font-size: 1rem; }
+    .login-form { padding: 24px; width: 100%; max-width: 360px; }
 }
 
 /* Loading Animation */
