@@ -32,25 +32,25 @@ const sampleUsers = [
     { email: 'tl@dm2.com', password: 'tl123', role: 'tl', status: 'active' }
 ];
 
-// Real data based on Google Sheets structure
+// Real data based on your exact format: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
 const sampleProductionData = [
-    { userId: 'ITPL6647', name: 'Ramya', project: 'Widespread Electric', target: 119, actual: 119, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team A', processName: 'Billing Invoice' },
-    { userId: 'ITPL9648', name: 'Geetha', project: 'Corr-Jensen', target: 18, actual: 18, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Account Payables' },
-    { userId: 'ITPL8058', name: 'Giri Prasad R', project: 'Soho Studio', target: 71, actual: 71, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team A', processName: 'ST - Order Entry & Claims' },
-    { userId: 'ITPL10359', name: 'A Dharani', project: 'Soho Studio', target: 92, actual: 92, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team A', processName: 'ST - Order Entry' },
-    { userId: 'ITPL8360', name: 'Meddabalmi Vishnuchakram', project: 'Soho Studio', target: 28, actual: 28, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team A', processName: 'ST - Claims' },
-    { userId: 'ITPL9668', name: 'K Kiruba Karan', project: 'Medscan Lab', target: 3, actual: 3, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team C', processName: 'Blood Samples' },
-    { userId: 'ITPL11680', name: 'M Deepika', project: 'Medscan Lab', target: 19, actual: 19, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team C', processName: 'Blood Samples' },
-    { userId: 'ITPL10376', name: 'Yavanika', project: 'Curexa Pharmacy', target: 220, actual: 196, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'RITPL5165', name: 'Surya Narayan', project: 'Curexa Pharmacy', target: 220, actual: 225, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'ITPL10723', name: 'Meghana', project: 'Curexa Pharmacy', target: 220, actual: 159, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'RITPL5298', name: 'Shyam Kumar', project: 'Curexa Pharmacy', target: 220, actual: 166, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'ITPL9727', name: 'Mounika', project: 'Curexa Pharmacy', target: 220, actual: 209, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'ITPL9146', name: 'Nagendra', project: 'Curexa Pharmacy', target: 220, actual: 119, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'RITPL5544', name: 'Pavan Kumar', project: 'Curexa Pharmacy', target: 220, actual: 0, leaves: 1, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'ITPL9646', name: 'Kusuma', project: 'Curexa Pharmacy', target: 220, actual: 0, leaves: 1, errors: 0, month: '2024-04', workingDays: 22, team: 'Team B', processName: 'Curexa - OE' },
-    { userId: 'ITPL8128', name: 'Rajesh T', project: 'Hit Promo', target: 60, actual: 60, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team C', processName: 'Hit - QC' },
-    { userId: 'ITPL8326', name: 'Uday Kiran Y', project: 'Hit Promo', target: 60, actual: 60, leaves: 0, errors: 0, month: '2024-04', workingDays: 22, team: 'Team C', processName: 'Hit - QC' }
+    { date: '4/21/2025', employeeId: 'ITPL6647', name: 'Ramya', clientName: 'Widespread Electric', processName: 'Billing Invoice', productivity: 119, target: 119, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL9648', name: 'Geetha', clientName: 'Corr-Jensen', processName: 'Account Payables', productivity: 18, target: 18, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL8058', name: 'Giri Prasad R', clientName: 'Soho Studio', processName: 'ST - Order Entry', productivity: 65, target: 65, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL10359', name: 'A Dharani', clientName: 'Soho Studio', processName: 'ST - Order Entry', productivity: 92, target: 92, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL8360', name: 'Meddabalmi Vishnuchakram', clientName: 'Soho Studio', processName: 'ST - Claims', productivity: 28, target: 28, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL9668', name: 'K Kiruba Karan', clientName: 'Medscan Lab', processName: 'Blood Samples', productivity: 3, target: 3, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL11680', name: 'M Deepika', clientName: 'Medscan Lab', processName: 'Blood Samples', productivity: 19, target: 19, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL10376', name: 'Yavanika', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 196, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'RITPL5165', name: 'Surya Narayan', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 225, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL10723', name: 'Meghana', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 159, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'RITPL5298', name: 'Shyam Kumar', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 166, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL9727', name: 'Mounika', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 209, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL9146', name: 'Nagendra', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 119, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'RITPL5544', name: 'Pavan Kumar', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 0, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 0, actualHours: 0 },
+    { date: '4/21/2025', employeeId: 'ITPL9646', name: 'Kusuma', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 0, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 0, actualHours: 0 },
+    { date: '4/21/2025', employeeId: 'ITPL8128', name: 'Rajesh T', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/21/2025', employeeId: 'ITPL8326', name: 'Uday Kiran Y', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 }
 ];
 
 // Initialize the application
@@ -1078,13 +1078,14 @@ function loadProductionData() {
 }
 
 function calculateMetrics() {
-    // Group users by team to check team size
+    // Group users by client/process to form teams
     const teamGroups = {};
     (productionData || []).forEach(user => {
-        if (!teamGroups[user.team]) {
-            teamGroups[user.team] = [];
+        const teamKey = `${user.clientName} - ${user.processName}`;
+        if (!teamGroups[teamKey]) {
+            teamGroups[teamKey] = [];
         }
-        teamGroups[user.team].push(user);
+        teamGroups[teamKey].push(user);
     });
     
     // Process each team
@@ -1093,50 +1094,59 @@ function calculateMetrics() {
     Object.keys(teamGroups).forEach(teamName => {
         const teamUsers = teamGroups[teamName];
         
-        // If team has less than 5 members, combine with other small teams
-        if (teamUsers.length < 5) {
-            // For demo, we'll treat small teams as individual teams
-            // In real implementation, you'd combine small teams here
+        // Only process teams with 4+ members as per your requirement
+        if (teamUsers.length < 4) {
+            return; // Skip teams with less than 4 members
         }
         
         const teamMetrics = teamUsers.map(user => {
-            // 1. Utilisation Formula: user total count / working days * 100
-            const workingDays = Number(user.workingDays) || 22;
-            const actual = Number(user.actual) || 0;
+            const productivity = Number(user.productivity) || 0;
             const target = Number(user.target) || 0;
-            const errors = Number(user.errors) || 0;
-            const leaves = Number(user.leaves) || 0;
-            const utilisation = workingDays > 0 ? (actual / workingDays) * 100 : 0;
+            const clientErrors = Number(user.clientErrors) || 0;
+            const internalErrors = Number(user.internalErrors) || 0;
+            const hoursWorked = Number(user.hoursWorked) || 8;
+            const actualHours = Number(user.actualHours) || 8;
+            
+            // 1. Utilisation Formula: (total count / per hour count) / hours worked * 100
+            // Per hour count = target / 8 (assuming 8 hours per day)
+            const perHourCount = target / 8;
+            const utilisation = (perHourCount > 0 && hoursWorked > 0) ? 
+                (productivity / perHourCount) / hoursWorked * 100 : 0;
             
             // 2. Stack Ranking Points Calculation
             let stackRankingPoints = 0;
             
             // Target Achievement Points (5, 4, 3, 2, 1)
-            if (target > 0 && actual >= target) {
-                const excessRatio = (actual - target) / target;
-                if (excessRatio >= 0.3) stackRankingPoints += 5; // 30%+ above target
-                else if (excessRatio >= 0.2) stackRankingPoints += 4; // 20-29% above target
-                else if (excessRatio >= 0.1) stackRankingPoints += 3; // 10-19% above target
-                else stackRankingPoints += 2; // 0-9% above target
-            } else {
-                stackRankingPoints += 1; // Below target
+            if (target > 0) {
+                const achievementRatio = (productivity / target) * 100;
+                if (achievementRatio >= 100) stackRankingPoints += 5;      // 100%+ = 5 points
+                else if (achievementRatio >= 90) stackRankingPoints += 4;  // 90-99% = 4 points
+                else if (achievementRatio >= 80) stackRankingPoints += 3;  // 80-89% = 3 points
+                else if (achievementRatio >= 70) stackRankingPoints += 2;  // 70-79% = 2 points
+                else stackRankingPoints += 1;                              // 60% or below = 1 point
             }
             
             // Error Points (5, 4, 3, 2, 1)
-            if (errors === 0) stackRankingPoints += 5;
-            else if (errors >= 1 && errors <= 3) stackRankingPoints += 4;
-            else if (errors >= 4 && errors <= 6) stackRankingPoints += 3;
-            else if (errors >= 7 && errors <= 9) stackRankingPoints += 2;
-            else if (errors >= 10) stackRankingPoints += 1;
+            const totalErrors = clientErrors + internalErrors;
+            if (totalErrors === 0) stackRankingPoints += 5;
+            else if (totalErrors >= 1 && totalErrors <= 3) stackRankingPoints += 4;
+            else if (totalErrors >= 4 && totalErrors <= 6) stackRankingPoints += 3;
+            else if (totalErrors >= 7 && totalErrors <= 9) stackRankingPoints += 2;
+            else if (totalErrors >= 10) stackRankingPoints += 1;
             
-            // Leave Points (2, 1, -1, -2)
-            if (leaves === 0) stackRankingPoints += 2;
-            else if (leaves >= 1 && leaves <= 2) stackRankingPoints += 1;
-            else if (leaves === 3) stackRankingPoints += -1;
-            else if (leaves >= 4) stackRankingPoints += -2;
+            // Working Days Points (2, 1, -1, -2)
+            // Calculate missing hours: expected hours - actual hours
+            const expectedHours = 8 * 22; // 8 hours per day * 22 working days per month
+            const missingHours = expectedHours - actualHours;
+            const missingDays = missingHours / 8; // Convert hours to days
             
-            // 3. Team Performance (based on volume vs target)
-            const teamPerformance = target > 0 ? (actual / target) * 100 : 0;
+            if (missingDays <= 0) stackRankingPoints += 2;        // No missing days = 2 points
+            else if (missingDays <= 2) stackRankingPoints += 1;   // 1-2 missing days = 1 point
+            else if (missingDays <= 3) stackRankingPoints -= 1;   // 3 missing days = -1 point
+            else stackRankingPoints -= 2;                         // 4+ missing days = -2 points
+            
+            // 3. Team Performance (based on productivity vs target)
+            const teamPerformance = target > 0 ? (productivity / target) * 100 : 0;
             
             return {
                 ...user,
@@ -1144,7 +1154,8 @@ function calculateMetrics() {
                 stackRankingPoints: stackRankingPoints,
                 teamPerformance: Math.round(teamPerformance * 100) / 100,
                 performanceStatus: teamPerformance >= 100 ? 'excellent' : 
-                                 teamPerformance >= 80 ? 'good' : 'poor'
+                                 teamPerformance >= 80 ? 'good' : 'poor',
+                team: teamName
             };
         });
         
@@ -1156,10 +1167,10 @@ function calculateMetrics() {
             user.stackRankingPosition = index + 1;
             user.utilisationPosition = teamMetrics
                 .sort((a, b) => b.utilisation - a.utilisation)
-                .findIndex(u => u.userId === user.userId) + 1;
+                .findIndex(u => u.employeeId === user.employeeId) + 1;
             user.teamPerformancePosition = teamMetrics
                 .sort((a, b) => b.teamPerformance - a.teamPerformance)
-                .findIndex(u => u.userId === user.userId) + 1;
+                .findIndex(u => u.employeeId === user.employeeId) + 1;
         });
         
         allMetrics = allMetrics.concat(teamMetrics);
@@ -1355,83 +1366,37 @@ function mapGoogleSheetRows(rows, cols) {
         return -1;
     };
     
-    // Try multiple patterns for each field - optimized for your sheet structure
-    const idIdx = findColIndex([
-        'itpl', 'itpl#', 'employee id', 'emp id', 'id', 'employeeid', 
-        'emp_id', 'employee_id', 'staff id', 'staffid', 'user id', 'userid'
-    ]);
-    
-    const nameIdx = findColIndex([
-        'name', 'employee name', 'employeename', 'emp name', 'empname',
-        'staff name', 'staffname', 'full name', 'fullname'
-    ]);
-    
-    // For your sheet, we'll use Process Name as the project/client
-    const clientIdx = findColIndex([
-        'process name', 'processname', 'process', 'client name', 'clientname', 
-        'project', 'project name', 'projectname', 'client', 'company', 'customer', 'account'
-    ]);
-    
-    const processIdx = findColIndex([
-        'process name', 'processname', 'process', 'task', 'activity',
-        'work type', 'worktype', 'operation'
-    ]);
-    
-    const prodIdx = findColIndex([
-        'productivity', 'actual', 'count', 'volume', 'output', 'quantity',
-        'completed', 'done', 'processed', 'items'
-    ]);
-    
-    const targetIdx = findColIndex([
-        'target', 'monthly target', 'monthlytarget', 'goal', 'quota',
-        'expected', 'planned', 'budget'
-    ]);
-    
-    const clientErrIdx = findColIndex([
-        'client errors', 'clienterror', 'client error', 'external errors',
-        'customer errors', 'client mistakes'
-    ]);
-    
-    const internalErrIdx = findColIndex([
-        'internal errors', 'internalerror', 'internal error', 'system errors',
-        'our errors', 'internal mistakes'
-    ]);
-    
-    // For your sheet, we'll use Status column to determine leaves
-    const leavesIdx = findColIndex([
-        'status', 'leaves', 'leave days', 'leavedays', 'absent', 'absence',
-        'off days', 'offdays', 'holidays'
-    ]);
-    
-    // For your sheet, we'll use Hours Worked or Actual Hours
-    const workingDaysIdx = findColIndex([
-        'hours worked', 'actual hours', 'working days', 'workingdays', 
-        'work days', 'workdays', 'total days', 'totaldays', 'days worked'
-    ]);
-    
-    const dateIdx = findColIndex([
-        'date', 'month', 'period', 'time', 'timestamp',
-        'created', 'updated', 'entry date'
-    ]);
+    // Map to your exact format: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
+    const dateIdx = findColIndex(['date', 'month', 'period', 'time', 'timestamp']);
+    const employeeIdIdx = findColIndex(['itpl', 'employee id', 'emp id', 'id', 'employeeid']);
+    const nameIdx = findColIndex(['name', 'employee name', 'employeename']);
+    const clientNameIdx = findColIndex(['client name', 'clientname', 'client', 'company', 'customer']);
+    const processNameIdx = findColIndex(['process name', 'processname', 'process']);
+    const productivityIdx = findColIndex(['productivity', 'actual', 'count', 'volume', 'output']);
+    const targetIdx = findColIndex(['target', 'monthly target', 'monthlytarget', 'goal']);
+    const clientErrorsIdx = findColIndex(['client errors', 'clienterror', 'client error']);
+    const internalErrorsIdx = findColIndex(['internal errors', 'internalerror', 'internal error']);
+    const hoursWorkedIdx = findColIndex(['hours worked', 'working days', 'workdays']);
+    const actualHoursIdx = findColIndex(['actual hours', 'actualhours', 'hours']);
     
     console.log('Column mapping results:', {
-        id: idIdx, name: nameIdx, client: clientIdx, process: processIdx,
-        prod: prodIdx, target: targetIdx, clientErr: clientErrIdx,
-        internalErr: internalErrIdx, leaves: leavesIdx, 
-        workingDays: workingDaysIdx, date: dateIdx
+        date: dateIdx, employeeId: employeeIdIdx, name: nameIdx, clientName: clientNameIdx,
+        processName: processNameIdx, productivity: productivityIdx, target: targetIdx,
+        clientErrors: clientErrorsIdx, internalErrors: internalErrorsIdx,
+        hoursWorked: hoursWorkedIdx, actualHours: actualHoursIdx
     });
     
     // If we can't find essential columns, show helpful error with detailed debugging
-    if (idIdx === -1 || nameIdx === -1) {
+    if (employeeIdIdx === -1 || nameIdx === -1) {
         const foundCols = cols.filter(col => col && col.trim()).join(', ');
         console.error('Column mapping failed. Details:');
         console.error('Available columns:', cols);
-        console.error('Column indices found:', { idIdx, nameIdx });
+        console.error('Column indices found:', { employeeIdIdx, nameIdx });
         console.error('All column indices:', {
-            id: idIdx, name: nameIdx, client: clientIdx, process: processIdx,
-            prod: prodIdx, target: targetIdx, clientErr: clientErrIdx,
-            internalErr: internalErrIdx, leaves: leavesIdx, 
-            workingDays: workingDaysIdx, date: dateIdx
+            date: dateIdx, employeeId: employeeIdIdx, name: nameIdx, clientName: clientNameIdx,
+            processName: processNameIdx, productivity: productivityIdx, target: targetIdx,
+            clientErrors: clientErrorsIdx, internalErrors: internalErrorsIdx,
+            hoursWorked: hoursWorkedIdx, actualHours: actualHoursIdx
         });
         
         // Try to find any column that might be ID or Name
@@ -1458,9 +1423,9 @@ function mapGoogleSheetRows(rows, cols) {
         .filter((row, index) => {
             // Skip empty rows or header row
             if (index === 0) return false;
-            // At minimum, we need ID and Name
-            return row[idIdx] && row[nameIdx] && 
-                   String(row[idIdx]).trim() && String(row[nameIdx]).trim();
+            // At minimum, we need Employee ID and Name
+            return row[employeeIdIdx] && row[nameIdx] && 
+                   String(row[employeeIdIdx]).trim() && String(row[nameIdx]).trim();
         })
         .map(row => {
             const toNum = (val) => {
@@ -1471,36 +1436,21 @@ function mapGoogleSheetRows(rows, cols) {
                 return isNaN(num) ? 0 : num;
             };
             
-            // Handle leaves based on Status column
-            const getLeaves = (statusVal) => {
-                if (!statusVal) return 0;
-                const status = String(statusVal).toLowerCase().trim();
-                if (status === 'leave' || status === 'week off' || status === 'absent') return 1;
-                return 0;
-            };
-            
-            const errors = toNum(row[clientErrIdx]) + toNum(row[internalErrIdx]);
-            const leaves = leavesIdx !== -1 ? getLeaves(row[leavesIdx]) : 0;
-            
-            // Use Process Name as both project and process name for your sheet
-            const processName = String(row[processIdx] || '').trim();
-            const project = processName || 'NA';
-            
             return {
-                userId: String(row[idIdx] || '').trim(),
+                date: row[dateIdx] ? String(row[dateIdx]) : '',
+                employeeId: String(row[employeeIdIdx] || '').trim(),
                 name: String(row[nameIdx] || '').trim(),
-                project: project,
-                processName: processName,
-                actual: toNum(row[prodIdx]),
+                clientName: String(row[clientNameIdx] || '').trim(),
+                processName: String(row[processNameIdx] || '').trim(),
+                productivity: toNum(row[productivityIdx]),
                 target: toNum(row[targetIdx]),
-                errors: errors,
-                leaves: leaves,
-                workingDays: toNum(row[workingDaysIdx]) || 8, // Default to 8 hours for your sheet
-                month: row[dateIdx] ? String(row[dateIdx]) : '',
-                team: 'Team A'
+                clientErrors: toNum(row[clientErrorsIdx]),
+                internalErrors: toNum(row[internalErrorsIdx]),
+                hoursWorked: toNum(row[hoursWorkedIdx]) || 8,
+                actualHours: toNum(row[actualHoursIdx]) || 8
             };
         })
-        .filter(record => record.userId && record.name);
+        .filter(record => record.employeeId && record.name);
     
     console.log('Successfully mapped records:', mapped.length);
     return mapped;
@@ -1535,17 +1485,17 @@ function createUtilisationChart(metrics) {
         window.utilisationChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.userId})`),
+                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
                 datasets: [{
                     label: 'Utilisation %',
                     data: metrics.map(m => m.utilisation),
                     backgroundColor: metrics.map(m => 
-                        m.utilisation >= 300 ? '#28a745' : 
-                        m.utilisation >= 250 ? '#ffc107' : '#dc3545'
+                        m.utilisation >= 100 ? '#28a745' : 
+                        m.utilisation >= 80 ? '#ffc107' : '#dc3545'
                     ),
                     borderColor: metrics.map(m => 
-                        m.utilisation >= 300 ? '#1e7e34' : 
-                        m.utilisation >= 250 ? '#e0a800' : '#bd2130'
+                        m.utilisation >= 100 ? '#1e7e34' : 
+                        m.utilisation >= 80 ? '#e0a800' : '#bd2130'
                     ),
                     borderWidth: 2
                 }]
@@ -1575,7 +1525,7 @@ function createUtilisationChart(metrics) {
                     },
                     title: {
                         display: true,
-                        text: 'Employee Utilisation Analysis (Count/Working Days * 100)'
+                        text: 'Employee Utilisation Analysis (Productivity/Per Hour Count/Hours Worked * 100)'
                     }
                 }
             }
@@ -1613,7 +1563,7 @@ function createStackRankingChart(metrics) {
         window.stackRankingChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.userId})`),
+                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
                 datasets: [{
                     label: 'Stack Ranking Points',
                     data: metrics.map(m => m.stackRankingPoints),
@@ -1657,7 +1607,7 @@ function createStackRankingChart(metrics) {
                     },
                     title: {
                         display: true,
-                        text: 'Stack Ranking (Target + Error + Leave Points)'
+                        text: 'Stack Ranking (Target Achievement + Errors + Working Days Points)'
                     }
                 }
             }
@@ -1695,7 +1645,7 @@ function createUserPerformanceChart(metrics) {
         window.userPerformanceChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.userId})`),
+                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
                 datasets: [{
                     label: 'Team Performance %',
                     data: metrics.map(m => m.teamPerformance),
@@ -1761,19 +1711,19 @@ function createUserCards(metrics) {
             <div class="user-info">
                 <div class="info-row">
                     <span class="info-label">Employee ID:</span>
-                    <span class="info-value">${user.userId}</span>
+                    <span class="info-value">${user.employeeId}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Project:</span>
-                    <span class="info-value">${user.project}</span>
+                    <span class="info-label">Client:</span>
+                    <span class="info-value">${user.clientName}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Process:</span>
                     <span class="info-value">${user.processName || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Current Count:</span>
-                    <span class="info-value">${user.actual.toLocaleString()}</span>
+                    <span class="info-label">Productivity:</span>
+                    <span class="info-value">${user.productivity.toLocaleString()}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Target:</span>
@@ -1792,12 +1742,16 @@ function createUserCards(metrics) {
                     <span class="info-value performance-${user.performanceStatus}">${user.teamPerformance}%</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Errors:</span>
-                    <span class="info-value">${user.errors}</span>
+                    <span class="info-label">Client Errors:</span>
+                    <span class="info-value">${user.clientErrors}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Leaves:</span>
-                    <span class="info-value">${user.leaves} days</span>
+                    <span class="info-label">Internal Errors:</span>
+                    <span class="info-value">${user.internalErrors}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hours Worked:</span>
+                    <span class="info-value">${user.hoursWorked}</span>
                 </div>
             </div>
         `;
