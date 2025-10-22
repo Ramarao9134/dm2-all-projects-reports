@@ -205,18 +205,11 @@
                             <button onclick="openGoogleSheets()" class="btn btn-primary">
                                 <i class="fab fa-google"></i> Connect Google Sheets
                             </button>
+                            <button onclick="debugGoogleSheetColumns()" class="btn btn-secondary" style="background:#6c757d;">
+                                🔍 Debug Columns
+                            </button>
                         </div>
                         <small id="savedSheetUrlHint" style="display:block; margin-top:8px; opacity:.9;"></small>
-                        <div class="help-section" style="margin-top:15px; padding:10px; background:#f8f9fa; border-radius:5px; font-size:12px;">
-                            <strong>📋 How to make your Google Sheet accessible:</strong>
-                            <ol style="margin:5px 0; padding-left:20px;">
-                                <li>Open your Google Sheet</li>
-                                <li>Click <strong>"Share"</strong> button (top-right)</li>
-                                <li>Change access to <strong>"Anyone with the link can view"</strong></li>
-                                <li>Copy the link and paste it above</li>
-                            </ol>
-                            <p style="margin:5px 0; color:#666;"><strong>Expected columns:</strong> ITPL#, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Leaves, Working Days, Date</p>
-                        </div>
                     </div>
                     <div class="upload-option">
                         <h3>Excel File Upload</h3>

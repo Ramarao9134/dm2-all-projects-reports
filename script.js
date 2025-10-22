@@ -730,6 +730,36 @@ function saveSheetUrl() {
     alert('✅ Google Sheet link saved. Click Connect Google Sheets to load data.');
 }
 
+// Debug function to test Google Sheet columns
+async function debugGoogleSheetColumns() {
+    const userUrl = localStorage.getItem('dm2_sheet_url');
+    if (!userUrl) {
+        alert('Please save a Google Sheet link first.');
+        return;
+    }
+    
+    const { sheetId, gid } = parseSheetUrl(userUrl);
+    if (!sheetId) {
+        alert('Invalid Google Sheet URL.');
+        return;
+    }
+    
+    try {
+        const { rows, cols } = await fetchGoogleSheetsDataWithFallback(sheetId, gid);
+        console.log('=== GOOGLE SHEET DEBUG INFO ===');
+        console.log('Sheet ID:', sheetId);
+        console.log('GID:', gid);
+        console.log('Total rows:', rows.length);
+        console.log('Columns found:', cols);
+        console.log('First few rows:', rows.slice(0, 3));
+        
+        alert(`Debug info logged to console. Found ${cols.length} columns: ${cols.join(', ')}`);
+    } catch (error) {
+        console.error('Debug failed:', error);
+        alert('Debug failed: ' + error.message);
+    }
+}
+
 function openGoogleSheets() {
     const userUrl = localStorage.getItem('dm2_sheet_url');
     if (!userUrl) {
@@ -1182,12 +1212,12 @@ async function fetchGoogleSheetsDataWithFallback(sheetId, gid) {
             if (i < 3) { // First 3 approaches should return gviz JSON
                 const cleaned = text
                     .replace(/^\)]}'\n?/, '') // strip XSSI guard
-                    .replace(/^.*setResponse\(/, '')
-                    .replace(/\);?\s*$/, '');
+        .replace(/^.*setResponse\(/, '')
+        .replace(/\);?\s*$/, '');
                 
-                const json = JSON.parse(cleaned);
-                const cols = (json.table.cols || []).map(c => (c && c.label) ? c.label : '');
-                const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v ?? '') : ''));
+    const json = JSON.parse(cleaned);
+    const cols = (json.table.cols || []).map(c => (c && c.label) ? c.label : '');
+    const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v ?? '') : ''));
                 
                 console.log(`Approach ${i + 1} successful - parsed ${rows.length} rows`);
                 return { rows, cols };
@@ -1388,10 +1418,37 @@ function mapGoogleSheetRows(rows, cols) {
         workingDays: workingDaysIdx, date: dateIdx
     });
     
-    // If we can't find essential columns, show helpful error
+    // If we can't find essential columns, show helpful error with detailed debugging
     if (idIdx === -1 || nameIdx === -1) {
         const foundCols = cols.filter(col => col && col.trim()).join(', ');
-        throw new Error(`Essential columns not found. Found columns: ${foundCols}. Please ensure your sheet has columns for Employee ID and Name.`);
+        console.error('Column mapping failed. Details:');
+        console.error('Available columns:', cols);
+        console.error('Column indices found:', { idIdx, nameIdx });
+        console.error('All column indices:', {
+            id: idIdx, name: nameIdx, client: clientIdx, process: processIdx,
+            prod: prodIdx, target: targetIdx, clientErr: clientErrIdx,
+            internalErr: internalErrIdx, leaves: leavesIdx, 
+            workingDays: workingDaysIdx, date: dateIdx
+        });
+        
+        // Try to find any column that might be ID or Name
+        const possibleIdCols = cols.filter((col, idx) => 
+            col && (col.toLowerCase().includes('id') || col.toLowerCase().includes('itpl'))
+        );
+        const possibleNameCols = cols.filter((col, idx) => 
+            col && col.toLowerCase().includes('name')
+        );
+        
+        let errorMsg = `Essential columns not found.\n\nFound columns: ${foundCols}\n\n`;
+        if (possibleIdCols.length > 0) {
+            errorMsg += `Possible ID columns: ${possibleIdCols.join(', ')}\n`;
+        }
+        if (possibleNameCols.length > 0) {
+            errorMsg += `Possible Name columns: ${possibleNameCols.join(', ')}\n`;
+        }
+        errorMsg += `\nPlease ensure your sheet has columns for Employee ID and Name.`;
+        
+        throw new Error(errorMsg);
     }
     
     const mapped = rows
