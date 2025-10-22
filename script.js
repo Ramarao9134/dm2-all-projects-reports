@@ -1335,21 +1335,27 @@ function mapGoogleSheetRows(rows, cols) {
     console.log('Mapping Google Sheets data...');
     console.log('Available columns:', cols);
     
-    // More flexible column finding with multiple patterns
+    // More flexible column finding with multiple patterns - prioritize exact matches
     const findColIndex = (patterns) => {
         for (const pattern of patterns) {
             const index = cols.findIndex(col => {
                 if (!col) return false;
-                const colLower = col.toLowerCase().trim();
-                const patternLower = pattern.toLowerCase().trim();
+                const colTrimmed = col.trim();
+                const patternTrimmed = pattern.trim();
                 
-                // Exact match
-                if (colLower === patternLower) return true;
+                // PRIORITY 1: Exact match (case-sensitive)
+                if (colTrimmed === patternTrimmed) return true;
                 
-                // Contains match
-                if (colLower.includes(patternLower)) return true;
+                // PRIORITY 2: Exact match (case-insensitive)
+                if (colTrimmed.toLowerCase() === patternTrimmed.toLowerCase()) return true;
                 
-                // Handle common variations
+                // PRIORITY 3: Contains match (case-insensitive)
+                if (colTrimmed.toLowerCase().includes(patternTrimmed.toLowerCase())) return true;
+                
+                // PRIORITY 4: Handle common variations
+                const colLower = colTrimmed.toLowerCase();
+                const patternLower = patternTrimmed.toLowerCase();
+                
                 const variations = [
                     colLower.replace(/[^a-z0-9]/g, ''), // Remove special chars
                     colLower.replace(/\s+/g, ''), // Remove spaces
@@ -1370,17 +1376,18 @@ function mapGoogleSheetRows(rows, cols) {
     };
     
     // Map to your exact format: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
-    const dateIdx = findColIndex(['date', 'month', 'period', 'time', 'timestamp']);
-    const employeeIdIdx = findColIndex(['itpl', 'employee id', 'emp id', 'id', 'employeeid']);
-    const nameIdx = findColIndex(['name', 'employee name', 'employeename']);
-    const clientNameIdx = findColIndex(['client name', 'clientname', 'client', 'company', 'customer']);
-    const processNameIdx = findColIndex(['process name', 'processname', 'process']);
-    const productivityIdx = findColIndex(['productivity', 'actual', 'count', 'volume', 'output']);
-    const targetIdx = findColIndex(['target', 'monthly target', 'monthlytarget', 'goal']);
-    const clientErrorsIdx = findColIndex(['client errors', 'clienterror', 'client error']);
-    const internalErrorsIdx = findColIndex(['internal errors', 'internalerror', 'internal error']);
-    const hoursWorkedIdx = findColIndex(['hours worked', 'working days', 'workdays']);
-    const actualHoursIdx = findColIndex(['actual hours', 'actualhours', 'hours']);
+    // ESSENTIAL FIX: Prioritize exact header names from your Google Sheet
+    const dateIdx = findColIndex(['Date', 'date', 'month', 'period', 'time', 'timestamp']);
+    const employeeIdIdx = findColIndex(['Employee ID', 'ITPL', 'itpl', 'employee id', 'emp id', 'id', 'employeeid']);
+    const nameIdx = findColIndex(['Name', 'name', 'employee name', 'employeename']);
+    const clientNameIdx = findColIndex(['Client Name', 'client name', 'clientname', 'client', 'company', 'customer']);
+    const processNameIdx = findColIndex(['Process Name', 'process name', 'processname', 'process']);
+    const productivityIdx = findColIndex(['Productivity', 'productivity', 'actual', 'count', 'volume', 'output']);
+    const targetIdx = findColIndex(['Target', 'target', 'monthly target', 'monthlytarget', 'goal']);
+    const clientErrorsIdx = findColIndex(['Client Errors', 'client errors', 'clienterror', 'client error']);
+    const internalErrorsIdx = findColIndex(['Internal Errors', 'internal errors', 'internalerror', 'internal error']);
+    const hoursWorkedIdx = findColIndex(['Hours Worked', 'hours worked', 'working days', 'workdays']);
+    const actualHoursIdx = findColIndex(['Actual Hours', 'actual hours', 'actualhours', 'hours']);
     
     console.log('Column mapping results:', {
         date: dateIdx, employeeId: employeeIdIdx, name: nameIdx, clientName: clientNameIdx,
