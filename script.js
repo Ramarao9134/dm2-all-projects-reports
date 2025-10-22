@@ -1355,7 +1355,7 @@ function mapGoogleSheetRows(rows, cols) {
         return -1;
     };
     
-    // Try multiple patterns for each field
+    // Try multiple patterns for each field - optimized for your sheet structure
     const idIdx = findColIndex([
         'itpl', 'itpl#', 'employee id', 'emp id', 'id', 'employeeid', 
         'emp_id', 'employee_id', 'staff id', 'staffid', 'user id', 'userid'
@@ -1366,9 +1366,10 @@ function mapGoogleSheetRows(rows, cols) {
         'staff name', 'staffname', 'full name', 'fullname'
     ]);
     
+    // For your sheet, we'll use Process Name as the project/client
     const clientIdx = findColIndex([
-        'client name', 'clientname', 'project', 'project name', 'projectname',
-        'client', 'company', 'customer', 'account'
+        'process name', 'processname', 'process', 'client name', 'clientname', 
+        'project', 'project name', 'projectname', 'client', 'company', 'customer', 'account'
     ]);
     
     const processIdx = findColIndex([
@@ -1396,14 +1397,16 @@ function mapGoogleSheetRows(rows, cols) {
         'our errors', 'internal mistakes'
     ]);
     
+    // For your sheet, we'll use Status column to determine leaves
     const leavesIdx = findColIndex([
-        'leaves', 'leave days', 'leavedays', 'absent', 'absence',
+        'status', 'leaves', 'leave days', 'leavedays', 'absent', 'absence',
         'off days', 'offdays', 'holidays'
     ]);
     
+    // For your sheet, we'll use Hours Worked or Actual Hours
     const workingDaysIdx = findColIndex([
-        'working days', 'workingdays', 'work days', 'workdays',
-        'total days', 'totaldays', 'days worked'
+        'hours worked', 'actual hours', 'working days', 'workingdays', 
+        'work days', 'workdays', 'total days', 'totaldays', 'days worked'
     ]);
     
     const dateIdx = findColIndex([
@@ -1463,23 +1466,36 @@ function mapGoogleSheetRows(rows, cols) {
             const toNum = (val) => {
                 if (!val) return 0;
                 const str = String(val).trim();
-                if (str === '' || str === '-' || str.toLowerCase() === 'na') return 0;
+                if (str === '' || str === '-' || str.toLowerCase() === 'na' || str.toLowerCase() === 'leave') return 0;
                 const num = Number(str);
                 return isNaN(num) ? 0 : num;
             };
             
+            // Handle leaves based on Status column
+            const getLeaves = (statusVal) => {
+                if (!statusVal) return 0;
+                const status = String(statusVal).toLowerCase().trim();
+                if (status === 'leave' || status === 'week off' || status === 'absent') return 1;
+                return 0;
+            };
+            
             const errors = toNum(row[clientErrIdx]) + toNum(row[internalErrIdx]);
+            const leaves = leavesIdx !== -1 ? getLeaves(row[leavesIdx]) : 0;
+            
+            // Use Process Name as both project and process name for your sheet
+            const processName = String(row[processIdx] || '').trim();
+            const project = processName || 'NA';
             
             return {
                 userId: String(row[idIdx] || '').trim(),
                 name: String(row[nameIdx] || '').trim(),
-                project: String(row[clientIdx] || 'NA').trim(),
-                processName: String(row[processIdx] || '').trim(),
+                project: project,
+                processName: processName,
                 actual: toNum(row[prodIdx]),
                 target: toNum(row[targetIdx]),
                 errors: errors,
-                leaves: toNum(row[leavesIdx]),
-                workingDays: toNum(row[workingDaysIdx]) || 22,
+                leaves: leaves,
+                workingDays: toNum(row[workingDaysIdx]) || 8, // Default to 8 hours for your sheet
                 month: row[dateIdx] ? String(row[dateIdx]) : '',
                 team: 'Team A'
             };
