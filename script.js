@@ -789,10 +789,6 @@ function openGoogleSheets() {
         });
 }
 
-function openOtherSources() {
-    alert('Other data sources integration would be implemented here. For demo purposes, sample data is loaded.');
-    loadProductionData();
-}
 
 // Direct function to handle Excel upload button click
 function uploadExcelFile() {
@@ -1293,47 +1289,125 @@ function parseSheetUrl(url) {
 
 function mapGoogleSheetRows(rows, cols) {
     console.log('Mapping Google Sheets data...');
-    console.log('Columns:', cols);
+    console.log('Available columns:', cols);
     
-    // Find column indices
+    // More flexible column finding with multiple patterns
     const findColIndex = (patterns) => {
         for (const pattern of patterns) {
-            const index = cols.findIndex(col => 
-                col && col.toLowerCase().includes(pattern.toLowerCase())
-            );
+            const index = cols.findIndex(col => {
+                if (!col) return false;
+                const colLower = col.toLowerCase().trim();
+                const patternLower = pattern.toLowerCase().trim();
+                
+                // Exact match
+                if (colLower === patternLower) return true;
+                
+                // Contains match
+                if (colLower.includes(patternLower)) return true;
+                
+                // Handle common variations
+                const variations = [
+                    colLower.replace(/[^a-z0-9]/g, ''), // Remove special chars
+                    colLower.replace(/\s+/g, ''), // Remove spaces
+                    colLower.replace(/[#]/g, ''), // Remove # symbol
+                ];
+                
+                for (const variation of variations) {
+                    if (variation.includes(patternLower.replace(/[^a-z0-9]/g, ''))) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            });
             if (index !== -1) return index;
         }
         return -1;
     };
     
-    const idIdx = findColIndex(['itpl', 'employee id', 'emp id', 'id']);
-    const nameIdx = findColIndex(['name', 'employee name']);
-    const clientIdx = findColIndex(['client name', 'project', 'client']);
-    const processIdx = findColIndex(['process name', 'process']);
-    const prodIdx = findColIndex(['productivity', 'actual', 'count', 'volume']);
-    const targetIdx = findColIndex(['target', 'monthly target']);
-    const clientErrIdx = findColIndex(['client errors', 'client error']);
-    const internalErrIdx = findColIndex(['internal errors', 'internal error']);
-    const leavesIdx = findColIndex(['leaves', 'leave days']);
-    const workingDaysIdx = findColIndex(['working days']);
-    const dateIdx = findColIndex(['date', 'month']);
+    // Try multiple patterns for each field
+    const idIdx = findColIndex([
+        'itpl', 'itpl#', 'employee id', 'emp id', 'id', 'employeeid', 
+        'emp_id', 'employee_id', 'staff id', 'staffid', 'user id', 'userid'
+    ]);
     
-    console.log('Column indices:', {
+    const nameIdx = findColIndex([
+        'name', 'employee name', 'employeename', 'emp name', 'empname',
+        'staff name', 'staffname', 'full name', 'fullname'
+    ]);
+    
+    const clientIdx = findColIndex([
+        'client name', 'clientname', 'project', 'project name', 'projectname',
+        'client', 'company', 'customer', 'account'
+    ]);
+    
+    const processIdx = findColIndex([
+        'process name', 'processname', 'process', 'task', 'activity',
+        'work type', 'worktype', 'operation'
+    ]);
+    
+    const prodIdx = findColIndex([
+        'productivity', 'actual', 'count', 'volume', 'output', 'quantity',
+        'completed', 'done', 'processed', 'items'
+    ]);
+    
+    const targetIdx = findColIndex([
+        'target', 'monthly target', 'monthlytarget', 'goal', 'quota',
+        'expected', 'planned', 'budget'
+    ]);
+    
+    const clientErrIdx = findColIndex([
+        'client errors', 'clienterror', 'client error', 'external errors',
+        'customer errors', 'client mistakes'
+    ]);
+    
+    const internalErrIdx = findColIndex([
+        'internal errors', 'internalerror', 'internal error', 'system errors',
+        'our errors', 'internal mistakes'
+    ]);
+    
+    const leavesIdx = findColIndex([
+        'leaves', 'leave days', 'leavedays', 'absent', 'absence',
+        'off days', 'offdays', 'holidays'
+    ]);
+    
+    const workingDaysIdx = findColIndex([
+        'working days', 'workingdays', 'work days', 'workdays',
+        'total days', 'totaldays', 'days worked'
+    ]);
+    
+    const dateIdx = findColIndex([
+        'date', 'month', 'period', 'time', 'timestamp',
+        'created', 'updated', 'entry date'
+    ]);
+    
+    console.log('Column mapping results:', {
         id: idIdx, name: nameIdx, client: clientIdx, process: processIdx,
         prod: prodIdx, target: targetIdx, clientErr: clientErrIdx,
-        internalErr: internalErrIdx, leaves: leavesIdx, workingDays: workingDaysIdx, date: dateIdx
+        internalErr: internalErrIdx, leaves: leavesIdx, 
+        workingDays: workingDaysIdx, date: dateIdx
     });
+    
+    // If we can't find essential columns, show helpful error
+    if (idIdx === -1 || nameIdx === -1) {
+        const foundCols = cols.filter(col => col && col.trim()).join(', ');
+        throw new Error(`Essential columns not found. Found columns: ${foundCols}. Please ensure your sheet has columns for Employee ID and Name.`);
+    }
     
     const mapped = rows
         .filter((row, index) => {
             // Skip empty rows or header row
             if (index === 0) return false;
-            return row[idIdx] && row[nameIdx];
+            // At minimum, we need ID and Name
+            return row[idIdx] && row[nameIdx] && 
+                   String(row[idIdx]).trim() && String(row[nameIdx]).trim();
         })
         .map(row => {
             const toNum = (val) => {
                 if (!val) return 0;
-                const num = Number(val);
+                const str = String(val).trim();
+                if (str === '' || str === '-' || str.toLowerCase() === 'na') return 0;
+                const num = Number(str);
                 return isNaN(num) ? 0 : num;
             };
             
@@ -1355,7 +1429,7 @@ function mapGoogleSheetRows(rows, cols) {
         })
         .filter(record => record.userId && record.name);
     
-    console.log('Mapped records:', mapped.length);
+    console.log('Successfully mapped records:', mapped.length);
     return mapped;
 }
 
