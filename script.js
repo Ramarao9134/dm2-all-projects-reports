@@ -1190,8 +1190,8 @@ async function fetchGoogleSheetsDataWithFallback(sheetId, gid) {
         `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`,
         // Approach 4: CORS proxy for gviz
         `https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`,
-        // Approach 5: Alternative CORS proxy
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`)}`
+        // Approach 5: Alternative CORS proxy (CSV export through proxy)
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`)}`
     ];
 
     for (let i = 0; i < approaches.length; i++) {
@@ -1219,21 +1219,24 @@ async function fetchGoogleSheetsDataWithFallback(sheetId, gid) {
                 throw new Error('Received HTML instead of data - sheet may not be publicly accessible');
             }
             
-            // Try to parse as JSON (gviz format)
-            if (i < 3) { // First 3 approaches should return gviz JSON
+            // Content-aware parser: detect format by content, not approach index
+            const looksLikeGviz = text.startsWith("/*O_o*/") || text.includes("setResponse(") || text.includes("google.visualization");
+            
+            if (looksLikeGviz) {
+                // Parse as GViz JSON
                 const cleaned = text
-                    .replace(/^\)]}'\n?/, '') // strip XSSI guard
-        .replace(/^.*setResponse\(/, '')
-        .replace(/\);?\s*$/, '');
+                    .replace(/^\)]}'\n?/, '')               // strip XSSI guard
+                    .replace(/^.*setResponse\(/, '')        // remove wrapper
+                    .replace(/\);?\s*$/, '');               // trailing );
                 
-    const json = JSON.parse(cleaned);
-    const cols = (json.table.cols || []).map(c => (c && c.label) ? c.label : '');
-    const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v ?? '') : ''));
+                const json = JSON.parse(cleaned);
+                const cols = (json.table.cols || []).map(c => (c && c.label) ? c.label : '');
+                const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v ?? '') : ''));
                 
-                console.log(`Approach ${i + 1} successful - parsed ${rows.length} rows`);
+                console.log(`Approach ${i + 1} successful - parsed ${rows.length} rows from GViz JSON`);
                 return { rows, cols };
             } else {
-                // CSV format (approaches 3+)
+                // Parse as CSV
                 const lines = text.split('\n').filter(line => line.trim());
                 if (lines.length < 2) {
                     throw new Error('No data rows found in CSV');
