@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: dm2-all-projects-reports
+    env: static
+    buildCommand: echo "Static site - no build required"
+    startCommand: npx serve -s . -l $PORT
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production

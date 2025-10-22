@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DM2-All-Projects-Reports</title>
+    <link rel="stylesheet" href="styles.css?v=20250116c">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>DM2-All-Projects-Reports</h1>
+                <p>Project Management & Reporting System</p>
+            </div>
+            <div class="login-form">
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Portal -->
+    <div id="adminPage" class="page">
+        <div class="header">
+            <h1>Admin Portal</h1>
+            <div class="user-info">
+                <span id="adminUserEmail"></span>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+        
+        <div class="admin-content">
+            <div class="admin-section">
+                <h2>User Management</h2>
+                <div class="user-form">
+                    <h3>Create New User</h3>
+                    <form id="createUserForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="newUserEmail">Email:</label>
+                                <input type="email" id="newUserEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newUserRole">Role:</label>
+                                <select id="newUserRole" required>
+                                    <option value="">Select Role</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="tl">TL & Coordinator</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="newUserPassword">Password:</label>
+                                <input type="password" id="newUserPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">Create User</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="users-list">
+                    <h3>Existing Users</h3>
+                    <div id="usersTable" class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager Portal -->
+    <div id="managerPage" class="page">
+        <div class="header">
+            <h1>Manager Portal</h1>
+            <div class="user-info">
+                <span id="managerUserEmail"></span>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+        
+        <div class="manager-content">
+            <div class="filters-section">
+                <h2>Data Filters</h2>
+                <div class="filter-controls">
+                    <div class="form-group">
+                        <label for="managerProjectFilter">Project:</label>
+                        <select id="managerProjectFilter">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="managerTLFilter">TL/Coordinator:</label>
+                        <select id="managerTLFilter">
+                            <option value="">All TLs/Coordinators</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="managerDateFilter">Date Range:</label>
+                        <select id="managerDateFilter">
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <button onclick="loadManagerData()" class="btn btn-primary">Load Data</button>
+                </div>
+            </div>
+            
+            <div class="manager-dashboard">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Project Overview</h3>
+                        <div id="managerProjectChart" class="chart-container">
+                            <canvas id="managerProjectCanvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Team Performance</h3>
+                        <div id="managerTeamChart" class="chart-container">
+                            <canvas id="managerTeamCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="top-performers-section">
+                    <h3>Top Performers by Project</h3>
+                    <div id="managerTopPerformers" class="manager-performers-grid">
+                        <!-- Top performers will be dynamically generated -->
+                    </div>
+                </div>
+                
+                <div class="feedback-section">
+                    <h3>Send Feedback</h3>
+                    <form id="managerFeedbackForm">
+                        <div class="form-group">
+                            <label for="feedbackTL">To TL/Coordinator:</label>
+                            <select id="feedbackTL" required>
+                                <option value="">Select TL/Coordinator</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="feedbackMessage">Message:</label>
+                            <textarea id="feedbackMessage" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Feedback</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TL & Coordinator Portal -->
+    <div id="tlPage" class="page">
+        <div class="header">
+            <h1>TL & Coordinator Portal</h1>
+            <div class="user-info">
+                <span id="tlUserEmail"></span>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+        
+        <div class="tl-content">
+            <div class="data-upload-section">
+                <h2>Data Upload Options</h2>
+                <div class="upload-options">
+                    <div class="upload-option">
+                        <h3>Google Sheets Integration</h3>
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <label for="googleSheetUrl">Paste Google Sheet link:</label>
+                            <input type="url" id="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..../edit?gid=...">
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button onclick="saveSheetUrl()" class="btn btn-secondary">
+                                Save Link
+                            </button>
+                            <button onclick="openGoogleSheets()" class="btn btn-primary">
+                                <i class="fab fa-google"></i> Connect Google Sheets
+                            </button>
+                        </div>
+                        <small id="savedSheetUrlHint" style="display:block; margin-top:8px; opacity:.9;"></small>
+                        <div class="help-section" style="margin-top:15px; padding:10px; background:#f8f9fa; border-radius:5px; font-size:12px;">
+                            <strong>📋 How to make your Google Sheet accessible:</strong>
+                            <ol style="margin:5px 0; padding-left:20px;">
+                                <li>Open your Google Sheet</li>
+                                <li>Click <strong>"Share"</strong> button (top-right)</li>
+                                <li>Change access to <strong>"Anyone with the link can view"</strong></li>
+                                <li>Copy the link and paste it above</li>
+                            </ol>
+                            <p style="margin:5px 0; color:#666;"><strong>Expected columns:</strong> ITPL#, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Leaves, Working Days, Date</p>
+                        </div>
+                    </div>
+                    <div class="upload-option">
+                        <h3>Excel File Upload</h3>
+                        <input type="file" id="excelUpload" accept=".xlsx,.xls" style="display: none;">
+                        <button onclick="uploadExcelFile()" class="btn btn-primary">
+                            <i class="fas fa-file-excel"></i> Upload Excel File
+                        </button>
+                    </div>
+                    <div class="upload-option">
+                        <h3>Other Data Sources</h3>
+                        <button onclick="openOtherSources()" class="btn btn-primary">
+                            <i class="fas fa-database"></i> Connect Other Sources
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="date-filter-section">
+                <h2>Data Analysis Period</h2>
+                <div class="date-controls">
+                    <div class="form-group">
+                        <label for="dateFilter">Select Period:</label>
+                        <select id="dateFilter" onchange="updateDateInputs()">
+                            <option value="">Select Period Type</option>
+                            <option value="month">Monthly</option>
+                            <option value="date">Date Range</option>
+                            <option value="year">Yearly</option>
+                        </select>
+                    </div>
+                    <div id="dateInputs" class="date-inputs">
+                        <p style="color: #666; font-style: italic;">Please select a period type above</p>
+                    </div>
+                    <button onclick="loadProductionData()" class="btn btn-primary">Load Data</button>
+                </div>
+            </div>
+            
+            <div class="visualization-section">
+                <div class="viz-tabs">
+                    <button class="tab-btn active" onclick="showTab('utilisation', event)">Utilisation</button>
+                    <button class="tab-btn" onclick="showTab('stackRanking', event)">Stack Ranking</button>
+                    <button class="tab-btn" onclick="showTab('userPerformance', event)">User Performance</button>
+                </div>
+                
+                <div id="utilisationTab" class="tab-content active">
+                    <h3>Utilisation Analysis</h3>
+                    <div class="chart-container">
+                        <canvas id="utilisationChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="stackRankingTab" class="tab-content">
+                    <h3>Stack Ranking</h3>
+                    <div class="chart-container">
+                        <canvas id="stackRankingChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="userPerformanceTab" class="tab-content">
+                    <h3>User Individual Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="userPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="user-cards-section">
+                <h2>Top Performers</h2>
+                <div id="userCards" class="user-cards-grid">
+                    <!-- User cards will be dynamically generated -->
+                </div>
+            </div>
+            
+            <div class="feedback-section">
+                <h2>Feedback from Manager</h2>
+                <div id="feedbackMessages" class="feedback-messages">
+                    <!-- Feedback messages will be displayed here -->
+                </div>
+                <div class="reply-section" id="replySection" style="display: none;">
+                    <h3>Reply to Feedback</h3>
+                    <div class="form-group">
+                        <label for="replyMessage">Your Reply:</label>
+                        <textarea id="replyMessage" rows="4" placeholder="Type your reply here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button onclick="sendReplyToManager()" class="btn btn-primary">Send Reply</button>
+                        <button onclick="cancelReply()" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20250116c"></script>
+</body>
+</html>
