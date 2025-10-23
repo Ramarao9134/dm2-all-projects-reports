@@ -372,30 +372,48 @@ function createManagerProjectChart() {
     });
   }
 
-  // Data prep - use clientName as project
-  const projects = [...new Set(productionData.map(d => d.clientName || d.processName || 'Unknown Project'))];
-  if (projects.length === 0) {
+  // Build project map with normalized keys to prevent missing projects
+  const projectMap = new Map();
+  filteredData.forEach(d => {
+    const clientName = (d.clientName || '').trim();
+    const processName = (d.processName || '').trim();
+    const projectKey = clientName || processName || 'Unknown Project';
+    const normalizedKey = projectKey.toLowerCase();
+    
+    if (!projectMap.has(normalizedKey)) {
+      projectMap.set(normalizedKey, {
+        displayName: projectKey,
+        rows: [],
+        members: new Set()
+      });
+    }
+    
+    const project = projectMap.get(normalizedKey);
+    project.rows.push(d);
+    if (d.employeeId) {
+      project.members.add(String(d.employeeId).trim());
+    }
+  });
+
+  if (projectMap.size === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No project data available</p>';
     return;
   }
 
-  const projectStats = projects.map(project => {
-    const projectData = filteredData.filter(d => (d.clientName || d.processName || 'Unknown Project') === project);
-    
-    // Remove duplicate employees by employeeId to prevent double-counting
-    const uniqueEmployees = [];
-    const seenIds = new Set();
-    projectData.forEach(employee => {
-      if (!seenIds.has(employee.employeeId)) {
-        seenIds.add(employee.employeeId);
-        uniqueEmployees.push(employee);
-      }
-    });
-    
-    const totalActual = uniqueEmployees.reduce((s, d) => s + (d.productivity || 0), 0);
-    const totalTarget = uniqueEmployees.reduce((s, d) => s + (d.target || 0), 0);
+  // Calculate stats for all projects (no filtering by member count)
+  const projectStats = Array.from(projectMap.entries()).map(([normalizedKey, { displayName, rows, members }]) => {
+    const memberCount = members.size;
+    const totalActual = rows.reduce((s, r) => s + (Number(r.productivity) || 0), 0);
+    const totalTarget = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
     const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
-    return { name: project, count: uniqueEmployees.length, totalActual, totalTarget, performance };
+    
+    return { 
+      name: displayName, 
+      count: memberCount, 
+      totalActual, 
+      totalTarget, 
+      performance 
+    };
   });
 
   const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3'];
@@ -463,7 +481,7 @@ function createManagerTeamChart() {
     if (d.employeeId) t.members.add(String(d.employeeId).trim());
   });
 
-  // 2) Compute stats and filter to teams with >= 4 unique members
+  // 2) Compute stats and filter to teams with >= 3 unique members
   const teamStats = Array.from(teamMap.entries())
     .map(([name, { rows, members }]) => {
       const uniqueCount = members.size; // real team size (no double count)
@@ -474,7 +492,7 @@ function createManagerTeamChart() {
       const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
       return { name, memberCount: uniqueCount, totalTarget, totalActual, totalErrors, totalLeaves, performance };
     })
-    .filter(t => t.memberCount >= 4) // only >3 members
+    .filter(t => t.memberCount >= 3) // only >=3 members
     .sort((a, b) => b.performance - a.performance);
 
   if (teamStats.length === 0) {
@@ -506,7 +524,7 @@ function createManagerTeamChart() {
         x: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: 'Team Performance Rankings (≥4 members)', font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: 'Team Performance Rankings (≥3 members)', font: { size: 16, weight: 'bold' } },
         legend: { display: false },
         tooltip: {
           callbacks: {
