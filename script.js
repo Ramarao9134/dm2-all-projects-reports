@@ -325,21 +325,39 @@ function loadManagerData() {
 
 function createManagerProjectChart() {
   const container = document.getElementById('managerProjectChart');
-  const canvas = document.getElementById('managerProjectCanvas');
-  console.log('Manager project chart - container:', container, 'canvas:', canvas);
-  if (!container || !canvas) { 
-    console.error('Manager project chart elements not found - container:', !!container, 'canvas:', !!canvas); 
-    return; 
+  if (!container) {
+    console.error('Manager project chart container not found');
+    return;
   }
+
+  // Clear any existing messages
+  const existingMessage = container.querySelector('div[style*="position:absolute"]');
+  if (existingMessage) {
+    existingMessage.remove();
+  }
+
+  // Self-heal: (Re)create canvas if missing
+  let canvas = container.querySelector('#managerProjectCanvas');
+  if (!canvas) {
+    console.log('Canvas missing, recreating...');
+    container.innerHTML = '<canvas id="managerProjectCanvas"></canvas>';
+    canvas = container.querySelector('#managerProjectCanvas');
+  }
+  
+  console.log('Manager project chart - container:', container, 'canvas:', canvas);
 
   if (typeof Chart === 'undefined') {
     container.innerHTML = '<p style="color:red;padding:20px;">Chart.js not loaded.</p>';
     return;
   }
 
-  // Destroy previous
-  if (window.managerProjectChart && typeof window.managerProjectChart.destroy === 'function') {
-    try { window.managerProjectChart.destroy(); } catch(e) { console.warn('project destroy failed', e); }
+  // Destroy previous chart safely without removing canvas
+  if (window.managerProjectChart?.destroy) {
+    try { 
+      window.managerProjectChart.destroy(); 
+    } catch(e) { 
+      console.warn('project destroy failed', e); 
+    }
   }
 
   // Get date range filter
@@ -396,7 +414,11 @@ function createManagerProjectChart() {
   });
 
   if (projectMap.size === 0) {
-    container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No project data available</p>';
+    // Show message without removing canvas
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = 'color:#666;padding:20px;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;';
+    messageDiv.textContent = 'No project data available';
+    container.appendChild(messageDiv);
     return;
   }
 
