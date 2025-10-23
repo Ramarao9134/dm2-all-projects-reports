@@ -416,11 +416,15 @@ function createManagerProjectChart() {
   if (projectMap.size === 0) {
     // Show message without removing canvas
     const messageDiv = document.createElement('div');
+    messageDiv.className = 'no-data-msg';
     messageDiv.style.cssText = 'color:#666;padding:20px;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;';
     messageDiv.textContent = 'No project data available';
     container.appendChild(messageDiv);
     return;
   }
+
+  // Remove any existing "no data" message
+  container.querySelector('.no-data-msg')?.remove();
 
   // Calculate stats for all projects (no filtering by member count)
   const projectStats = Array.from(projectMap.entries()).map(([pKey, { displayName, rows, members }]) => {
@@ -466,8 +470,7 @@ function createManagerProjectChart() {
                 `${p.name}`,
                 `Employees: ${p.count}`,
                 `Performance: ${p.performance}%`,
-                `Actual: ${p.totalActual.toLocaleString()}`,
-                `Target: ${p.totalTarget.toLocaleString()}`
+                `Actual: ${p.totalActual.toLocaleString()}`
               ];
             }
           }
@@ -674,34 +677,34 @@ function loadManagerFeedbackMessages() {
         conversations[threadId].push(feedback);
     });
     
-    // Display conversations (simplified and shorter)
+    // Display full conversations with all messages
     Object.values(conversations).forEach(conversation => {
         conversation.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         
         const conversationDiv = document.createElement('div');
-        conversationDiv.className = 'conversation-thread-simple';
+        conversationDiv.className = 'conversation-thread';
         
         const otherUser = conversation[0].from === currentUser.email ? conversation[0].to : conversation[0].from;
-        const lastMessage = conversation[conversation.length - 1];
-        const messageCount = conversation.length;
         
-        // Show only the last message and count
-        conversationDiv.innerHTML = `
-            <div class="conversation-summary">
-                <div class="conversation-header-simple">
-                    <strong>${otherUser}</strong>
-                    <span class="message-count">${messageCount} messages</span>
-                </div>
-                <div class="last-message">
-                    <span class="sender">${lastMessage.from === currentUser.email ? 'You' : 'Them'}:</span>
-                    <span class="message-text">${lastMessage.message.length > 50 ? lastMessage.message.substring(0, 50) + '...' : lastMessage.message}</span>
-                </div>
-                <div class="conversation-time">
-                    <small>${new Date(lastMessage.timestamp).toLocaleDateString()}</small>
-                </div>
-            </div>
-        `;
+        let conversationHTML = '<div class="conversation-header">';
+        conversationHTML += `<h5>Conversation with: ${otherUser}</h5>`;
+        conversationHTML += '</div>';
         
+        // Show all messages in the conversation
+        conversation.forEach(msg => {
+            const isFromCurrentUser = msg.from === currentUser.email;
+            conversationHTML += `
+                <div class="message ${isFromCurrentUser ? 'message-sent' : 'message-received'}">
+                    <div class="message-header">
+                        <strong>${isFromCurrentUser ? 'You' : msg.from}</strong>
+                        <small>${new Date(msg.timestamp).toLocaleString()}</small>
+                    </div>
+                    <div class="message-content">${msg.message}</div>
+                </div>
+            `;
+        });
+        
+        conversationDiv.innerHTML = conversationHTML;
         container.appendChild(conversationDiv);
     });
 }

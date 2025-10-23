@@ -661,6 +661,8 @@ tr:hover {
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: none;
+    overflow-y: visible;
 }
 
 .conversation-header {
@@ -714,6 +716,8 @@ tr:hover {
 .message-content {
     line-height: 1.5;
     word-wrap: break-word;
+    white-space: pre-wrap;
+    width: 100%;
 }
 
 /* Reply Section Styles */
