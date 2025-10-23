@@ -1376,7 +1376,9 @@ function mapGoogleSheetRows(rows, cols) {
     };
     
     // Map to your exact format: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
-    // ESSENTIAL FIX: Prioritize exact header names from your Google Sheet
+    // CRITICAL FIX: Handle actual API response codes and map by position if headers are corrupted
+    
+    // First, try to find exact column names
     const dateIdx = findColIndex(['Date', 'date', 'month', 'period', 'time', 'timestamp']);
     const employeeIdIdx = findColIndex(['Employee ID', 'ITPL', 'itpl', 'employee id', 'emp id', 'id', 'employeeid']);
     const nameIdx = findColIndex(['Name', 'name', 'employee name', 'employeename']);
@@ -1389,15 +1391,49 @@ function mapGoogleSheetRows(rows, cols) {
     const hoursWorkedIdx = findColIndex(['Hours Worked', 'hours worked', 'working days', 'workdays']);
     const actualHoursIdx = findColIndex(['Actual Hours', 'actual hours', 'actualhours', 'hours']);
     
+    // If essential columns not found, try to map by position (assuming standard order)
+    let finalDateIdx = dateIdx;
+    let finalEmployeeIdIdx = employeeIdIdx;
+    let finalNameIdx = nameIdx;
+    let finalClientNameIdx = clientNameIdx;
+    let finalProcessNameIdx = processNameIdx;
+    let finalProductivityIdx = productivityIdx;
+    let finalTargetIdx = targetIdx;
+    let finalClientErrorsIdx = clientErrorsIdx;
+    let finalInternalErrorsIdx = internalErrorsIdx;
+    let finalHoursWorkedIdx = hoursWorkedIdx;
+    let finalActualHoursIdx = actualHoursIdx;
+    
+    if (employeeIdIdx === -1 || nameIdx === -1) {
+        console.log('Essential columns not found by name, trying position-based mapping...');
+        console.log('Available columns:', cols);
+        
+        // Map by position based on your sheet structure: Date, ITPL, Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
+        if (cols.length >= 10) {
+            console.log('Using position-based mapping for columns');
+            finalDateIdx = 0;        // Column A: Date
+            finalEmployeeIdIdx = 1;  // Column B: ITPL (Employee ID)
+            finalNameIdx = 2;        // Column C: Name
+            finalClientNameIdx = 3;  // Column D: Process Name (use as Client Name)
+            finalProcessNameIdx = 3; // Column D: Process Name
+            finalProductivityIdx = 4;// Column E: Productivity
+            finalTargetIdx = 5;      // Column F: Target
+            finalClientErrorsIdx = 6;// Column G: Client Errors
+            finalInternalErrorsIdx = 7; // Column H: Internal Errors
+            finalHoursWorkedIdx = 8; // Column I: Hours Worked
+            finalActualHoursIdx = 9; // Column J: Actual Hours
+        }
+    }
+    
     console.log('Column mapping results:', {
-        date: dateIdx, employeeId: employeeIdIdx, name: nameIdx, clientName: clientNameIdx,
-        processName: processNameIdx, productivity: productivityIdx, target: targetIdx,
-        clientErrors: clientErrorsIdx, internalErrors: internalErrorsIdx,
-        hoursWorked: hoursWorkedIdx, actualHours: actualHoursIdx
+        date: finalDateIdx, employeeId: finalEmployeeIdIdx, name: finalNameIdx, clientName: finalClientNameIdx,
+        processName: finalProcessNameIdx, productivity: finalProductivityIdx, target: finalTargetIdx,
+        clientErrors: finalClientErrorsIdx, internalErrors: finalInternalErrorsIdx,
+        hoursWorked: finalHoursWorkedIdx, actualHours: finalActualHoursIdx
     });
     
     // If we can't find essential columns, show helpful error with detailed debugging
-    if (employeeIdIdx === -1 || nameIdx === -1) {
+    if (finalEmployeeIdIdx === -1 || finalNameIdx === -1) {
         const foundCols = cols.filter(col => col && col.trim()).join(', ');
         console.error('Column mapping failed. Details:');
         console.error('Available columns:', cols);
@@ -1434,8 +1470,8 @@ function mapGoogleSheetRows(rows, cols) {
             // Skip empty rows or header row
             if (index === 0) return false;
             // At minimum, we need Employee ID and Name
-            return row[employeeIdIdx] && row[nameIdx] && 
-                   String(row[employeeIdIdx]).trim() && String(row[nameIdx]).trim();
+            return row[finalEmployeeIdIdx] && row[finalNameIdx] && 
+                   String(row[finalEmployeeIdIdx]).trim() && String(row[finalNameIdx]).trim();
         })
         .map(row => {
             const toNum = (val) => {
@@ -1447,17 +1483,17 @@ function mapGoogleSheetRows(rows, cols) {
             };
             
             return {
-                date: row[dateIdx] ? String(row[dateIdx]) : '',
-                employeeId: String(row[employeeIdIdx] || '').trim(),
-                name: String(row[nameIdx] || '').trim(),
-                clientName: String(row[clientNameIdx] || '').trim(),
-                processName: String(row[processNameIdx] || '').trim(),
-                productivity: toNum(row[productivityIdx]),
-                target: toNum(row[targetIdx]),
-                clientErrors: toNum(row[clientErrorsIdx]),
-                internalErrors: toNum(row[internalErrorsIdx]),
-                hoursWorked: toNum(row[hoursWorkedIdx]) || 8,
-                actualHours: toNum(row[actualHoursIdx]) || 8
+                date: row[finalDateIdx] ? String(row[finalDateIdx]) : '',
+                employeeId: String(row[finalEmployeeIdIdx] || '').trim(),
+                name: String(row[finalNameIdx] || '').trim(),
+                clientName: String(row[finalClientNameIdx] || '').trim(),
+                processName: String(row[finalProcessNameIdx] || '').trim(),
+                productivity: toNum(row[finalProductivityIdx]),
+                target: toNum(row[finalTargetIdx]),
+                clientErrors: toNum(row[finalClientErrorsIdx]),
+                internalErrors: toNum(row[finalInternalErrorsIdx]),
+                hoursWorked: toNum(row[finalHoursWorkedIdx]) || 8,
+                actualHours: toNum(row[finalActualHoursIdx]) || 8
             };
         })
         .filter(record => record.employeeId && record.name);
