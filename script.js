@@ -342,16 +342,46 @@ function createManagerProjectChart() {
     try { window.managerProjectChart.destroy(); } catch(e) { console.warn('project destroy failed', e); }
   }
 
-  // Data prep (unchanged)
-  const projects = [...new Set(productionData.map(d => d.project))];
+  // Get date range filter
+  const dateRange = document.getElementById('managerDateRange')?.value || 'This Month';
+  
+  // Filter data based on date range
+  let filteredData = [...productionData];
+  if (dateRange !== 'All Time') {
+    const now = new Date();
+    const filterDate = new Date();
+    
+    switch (dateRange) {
+      case 'This Week':
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case 'This Month':
+        filterDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'This Quarter':
+        filterDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'This Year':
+        filterDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+    
+    filteredData = productionData.filter(user => {
+      const userDate = new Date(user.date);
+      return userDate >= filterDate;
+    });
+  }
+
+  // Data prep - use clientName as project
+  const projects = [...new Set(filteredData.map(d => d.clientName || d.processName || 'Unknown Project'))];
   if (projects.length === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No project data available</p>';
     return;
   }
 
   const projectStats = projects.map(project => {
-    const projectData = productionData.filter(d => d.project === project);
-    const totalActual = projectData.reduce((s, d) => s + (d.actual || 0), 0);
+    const projectData = filteredData.filter(d => (d.clientName || d.processName || 'Unknown Project') === project);
+    const totalActual = projectData.reduce((s, d) => s + (d.productivity || 0), 0);
     const totalTarget = projectData.reduce((s, d) => s + (d.target || 0), 0);
     const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
     return { name: project, count: projectData.length, totalActual, totalTarget, performance };
@@ -375,7 +405,7 @@ function createManagerProjectChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: 'All Projects Performance Overview', font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: `All Projects Performance Overview (${dateRange})`, font: { size: 16, weight: 'bold' } },
         legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
         tooltip: {
           callbacks: {
@@ -414,21 +444,39 @@ function createManagerTeamChart() {
     try { window.managerTeamChart.destroy(); } catch(e) { console.warn('team destroy failed', e); }
   }
 
-  const teams = [...new Set(productionData.map(d => d.team))];
+  // Group by teams (client-process combinations)
+  const teamGroups = {};
+  productionData.forEach(user => {
+    const teamKey = `${user.clientName} - ${user.processName}`;
+    if (!teamGroups[teamKey]) {
+      teamGroups[teamKey] = [];
+    }
+    teamGroups[teamKey].push(user);
+  });
+
+  const teams = Object.keys(teamGroups);
   if (teams.length === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No team data available</p>';
     return;
   }
 
   const teamStats = teams.map(team => {
-    const teamData = productionData.filter(d => d.team === team);
+    const teamData = teamGroups[team];
     const totalTarget = teamData.reduce((s,d)=>s+(d.target||0),0);
-    const totalActual = teamData.reduce((s,d)=>s+(d.actual||0),0);
-    const totalErrors = teamData.reduce((s,d)=>s+(d.errors||0),0);
-    const totalLeaves = teamData.reduce((s,d)=>s+(d.leaves||0),0);
+    const totalActual = teamData.reduce((s,d)=>s+(d.productivity||0),0);
+    const totalClientErrors = teamData.reduce((s,d)=>s+(d.clientErrors||0),0);
+    const totalInternalErrors = teamData.reduce((s,d)=>s+(d.internalErrors||0),0);
     const performance = totalTarget>0 ? Math.round((totalActual/totalTarget)*100) : 0;
-    return { name: team, count: teamData.length, performance, totalActual, totalTarget, totalErrors, totalLeaves };
-  });
+    return { 
+      name: team, 
+      count: teamData.length, 
+      performance, 
+      totalActual, 
+      totalTarget, 
+      totalClientErrors, 
+      totalInternalErrors 
+    };
+  }).sort((a, b) => b.performance - a.performance); // Sort by performance ranking
 
   const ctx2d = canvas.getContext('2d');
   window.managerTeamChart = new Chart(ctx2d, {
@@ -454,7 +502,7 @@ function createManagerTeamChart() {
         x: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: 'All Teams Performance Overview', font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: 'Team Performance Rankings (Top to Bottom)', font: { size: 16, weight: 'bold' } },
         legend: { display: false },
         tooltip: {
           callbacks: {
@@ -466,8 +514,8 @@ function createManagerTeamChart() {
                 `Performance: ${t.performance}%`,
                 `Actual: ${t.totalActual.toLocaleString()}`,
                 `Target: ${t.totalTarget.toLocaleString()}`,
-                `Errors: ${t.totalErrors}`,
-                `Leaves: ${t.totalLeaves}`
+                `Client Errors: ${t.totalClientErrors}`,
+                `Internal Errors: ${t.totalInternalErrors}`
               ];
             }
           }
@@ -482,23 +530,31 @@ function createManagerIDCards() {
     const container = document.getElementById('managerTopPerformers');
     container.innerHTML = '';
     
-    // Group by project
+    // Group by project/client
     const projectGroups = {};
     metrics.forEach(user => {
-        if (!projectGroups[user.project]) {
-            projectGroups[user.project] = [];
+        const projectKey = user.clientName || user.processName || 'Unknown Project';
+        if (!projectGroups[projectKey]) {
+            projectGroups[projectKey] = [];
         }
-        projectGroups[user.project].push(user);
+        projectGroups[projectKey].push(user);
     });
     
     // Create ID cards for each project's top performer (max 6 cards)
-    const projectNames = Object.keys(projectGroups).slice(0, 6);
-    projectNames.forEach(projectName => {
+    const projectNames = Object.keys(projectGroups).sort((a, b) => {
+        const aTopPerformer = projectGroups[a][0];
+        const bTopPerformer = projectGroups[b][0];
+        return (bTopPerformer?.stackRankingPoints || 0) - (aTopPerformer?.stackRankingPoints || 0);
+    }).slice(0, 6);
+    
+    projectNames.forEach((projectName, index) => {
         const projectUsers = projectGroups[projectName];
+        if (!projectUsers || projectUsers.length === 0) return;
+        
         const topPerformer = projectUsers[0]; // Already sorted by stack ranking points
         
         // before appending, build a stable id
-        const cardId = `tp-${projectName.replace(/\W+/g,'-').toLowerCase()}-${topPerformer.userId}`;
+        const cardId = `tp-${projectName.replace(/\W+/g,'-').toLowerCase()}-${topPerformer.employeeId}`;
         if (document.getElementById(cardId)) {
           // already exists (defensive)
           return;
@@ -507,28 +563,35 @@ function createManagerIDCards() {
         const card = document.createElement('div');
         card.id = cardId;                        // NEW
         card.className = 'manager-id-card';
+        
+        const medalIcons = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅'];
+        
         card.innerHTML = `
             <div class="card-header">
                 <h4>${topPerformer.name}</h4>
-                <div class="medal-icon">🥇</div>
+                <div class="medal-icon">${medalIcons[index] || '🏅'}</div>
             </div>
             <div class="card-body">
                 <div class="employee-info">
                     <div class="info-row">
                         <span class="info-label">Employee ID:</span>
-                        <span class="info-value">${topPerformer.userId}</span>
+                        <span class="info-value">${topPerformer.employeeId}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Project Name:</span>
-                        <span class="info-value">${topPerformer.project}</span>
+                        <span class="info-label">Client:</span>
+                        <span class="info-value">${topPerformer.clientName}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Process:</span>
                         <span class="info-value">${topPerformer.processName || 'N/A'}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Current Month Count:</span>
-                        <span class="info-value">${topPerformer.actual.toLocaleString()}</span>
+                        <span class="info-label">Productivity:</span>
+                        <span class="info-value">${(topPerformer.productivity || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Target:</span>
+                        <span class="info-value">${(topPerformer.target || 0).toLocaleString()}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Utilisation Position:</span>
@@ -546,15 +609,15 @@ function createManagerIDCards() {
                 <div class="performance-stats">
                     <div class="stat-item">
                         <span class="stat-label">Utilisation:</span>
-                        <span class="stat-value">${topPerformer.utilisation}%</span>
+                        <span class="stat-value">${topPerformer.utilisation || 0}%</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Stack Points:</span>
-                        <span class="stat-value">${topPerformer.stackRankingPoints}</span>
+                        <span class="stat-value">${topPerformer.stackRankingPoints || 0}</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Team Performance:</span>
-                        <span class="stat-value">${topPerformer.teamPerformance}%</span>
+                        <span class="stat-value">${topPerformer.teamPerformance || 0}%</span>
                     </div>
                 </div>
             </div>
