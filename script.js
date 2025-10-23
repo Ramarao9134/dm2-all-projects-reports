@@ -806,11 +806,11 @@ function openGoogleSheets() {
             loadProductionData();
             alert('✅ Successfully loaded ' + mapped.length + ' records from Google Sheets!');
         })
-        .catch(err => {
-            console.error('Google Sheets fetch failed:', err);
-            alert('❌ Failed to load Google Sheets data:\n\n' + err.message + '\n\nTroubleshooting:\n1. Make sure the sheet is publicly accessible (Share → Anyone with the link can view)\n2. Check the URL is correct\n3. Ensure the sheet has data in the first sheet\n4. Verify column headers match expected format\n\nUsing sample data instead.');
-            loadProductionData();
-        })
+            .catch(err => {
+                console.error('Google Sheets fetch failed:', err);
+                alert('❌ Failed to load Google Sheets data:\n\n' + err.message + '\n\n🔧 CRITICAL FIX REQUIRED:\n1. Open your Google Sheet\n2. Click "Share" button (top-right)\n3. Change to "Anyone with the link can view"\n4. Copy the new link and try again\n\n📋 Expected columns: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours\n\nUsing sample data for now.');
+                loadProductionData();
+            })
         .finally(() => {
             if (connectBtn) {
                 connectBtn.innerHTML = '<i class="fab fa-google"></i> Connect Google Sheets';
@@ -1225,6 +1225,7 @@ async function fetchGoogleSheetsDataWithFallback(sheetId, gid) {
             if (looksLikeGviz) {
                 // Parse as GViz JSON
                 const cleaned = text
+                    .replace(/^\/\*O_o\*\/\s*/, '')         // CRITICAL FIX: strip /*O_o*/ comment
                     .replace(/^\)]}'\n?/, '')               // strip XSSI guard
                     .replace(/^.*setResponse\(/, '')        // remove wrapper
                     .replace(/\);?\s*$/, '');               // trailing );
@@ -1769,11 +1770,11 @@ function createUserCards(metrics) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Productivity:</span>
-                    <span class="info-value">${user.productivity.toLocaleString()}</span>
+                    <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Target:</span>
-                    <span class="info-value">${user.target.toLocaleString()}</span>
+                    <span class="info-value">${(user.target || 0).toLocaleString()}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Utilisation:</span>
@@ -1789,15 +1790,15 @@ function createUserCards(metrics) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Client Errors:</span>
-                    <span class="info-value">${user.clientErrors}</span>
+                    <span class="info-value">${user.clientErrors || 0}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Internal Errors:</span>
-                    <span class="info-value">${user.internalErrors}</span>
+                    <span class="info-value">${user.internalErrors || 0}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Hours Worked:</span>
-                    <span class="info-value">${user.hoursWorked}</span>
+                    <span class="info-value">${user.hoursWorked || 0}</span>
                 </div>
             </div>
         `;
