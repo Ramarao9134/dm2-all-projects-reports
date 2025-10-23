@@ -1603,19 +1603,33 @@ function createUtilisationChart(metrics) {
         return;
     }
     
+    // Remove duplicates and sort by utilisation descending
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Sort by utilisation descending (best performers first)
+    uniqueEmployees.sort((a, b) => b.utilisation - a.utilisation);
+    
     try {
         window.utilisationChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
+                labels: uniqueEmployees.map(m => `${m.name} (${m.clientName})`),
                 datasets: [{
                     label: 'Utilisation %',
-                    data: metrics.map(m => m.utilisation),
-                    backgroundColor: metrics.map(m => 
+                    data: uniqueEmployees.map(m => m.utilisation),
+                    backgroundColor: uniqueEmployees.map(m => 
                         m.utilisation >= 100 ? '#28a745' : 
                         m.utilisation >= 80 ? '#ffc107' : '#dc3545'
                     ),
-                    borderColor: metrics.map(m => 
+                    borderColor: uniqueEmployees.map(m => 
                         m.utilisation >= 100 ? '#1e7e34' : 
                         m.utilisation >= 80 ? '#e0a800' : '#bd2130'
                     ),
@@ -1648,6 +1662,11 @@ function createUtilisationChart(metrics) {
                     title: {
                         display: true,
                         text: 'Employee Utilisation Analysis (Productivity/Per Hour Count/Hours Worked * 100)'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `${uniqueEmployees[ctx[0].dataIndex].name} (${uniqueEmployees[ctx[0].dataIndex].clientName})`
+                        }
                     }
                 }
             }
@@ -1681,21 +1700,35 @@ function createStackRankingChart(metrics) {
         return;
     }
     
+    // Remove duplicates and sort by stack ranking points descending
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Sort by stack ranking points descending (best performers first)
+    uniqueEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
+    
     try {
         window.stackRankingChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
+                labels: uniqueEmployees.map(m => `${m.name} (${m.clientName})`),
                 datasets: [{
                     label: 'Stack Ranking Points',
-                    data: metrics.map(m => m.stackRankingPoints),
-                    backgroundColor: metrics.map((m, index) => {
+                    data: uniqueEmployees.map(m => m.stackRankingPoints),
+                    backgroundColor: uniqueEmployees.map((m, index) => {
                         if (index === 0) return '#ffd700'; // Gold for 1st
                         if (index === 1) return '#c0c0c0'; // Silver for 2nd
                         if (index === 2) return '#cd7f32'; // Bronze for 3rd
                         return '#667eea';
                     }),
-                    borderColor: metrics.map((m, index) => {
+                    borderColor: uniqueEmployees.map((m, index) => {
                         if (index === 0) return '#ffb300'; // Gold border
                         if (index === 1) return '#a0a0a0'; // Silver border
                         if (index === 2) return '#b8860b'; // Bronze border
@@ -1730,6 +1763,11 @@ function createStackRankingChart(metrics) {
                     title: {
                         display: true,
                         text: 'Stack Ranking (Target Achievement + Errors + Working Days Points)'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `${uniqueEmployees[ctx[0].dataIndex].name} (${uniqueEmployees[ctx[0].dataIndex].clientName})`
+                        }
                     }
                 }
             }
@@ -1763,20 +1801,34 @@ function createUserPerformanceChart(metrics) {
         return;
     }
     
+    // Remove duplicates and sort by team performance descending
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Sort by team performance descending (best performers first)
+    uniqueEmployees.sort((a, b) => b.teamPerformance - a.teamPerformance);
+    
     try {
         window.userPerformanceChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: metrics.map(m => `${m.name} (${m.employeeId})`),
+                labels: uniqueEmployees.map(m => `${m.name} (${m.clientName})`),
                 datasets: [{
                     label: 'Team Performance %',
-                    data: metrics.map(m => m.teamPerformance),
+                    data: uniqueEmployees.map(m => m.teamPerformance),
                     borderColor: '#667eea',
                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                     tension: 0.4,
                     fill: true,
                     borderWidth: 3,
-                    pointBackgroundColor: metrics.map(m => 
+                    pointBackgroundColor: uniqueEmployees.map(m => 
                         m.teamPerformance >= 100 ? '#28a745' : 
                         m.teamPerformance >= 80 ? '#ffc107' : '#dc3545'
                     ),
@@ -1808,6 +1860,11 @@ function createUserPerformanceChart(metrics) {
                     title: {
                         display: true,
                         text: 'Team Performance Analysis (Volume vs Target)'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `${uniqueEmployees[ctx[0].dataIndex].name} (${uniqueEmployees[ctx[0].dataIndex].clientName})`
+                        }
                     }
                 }
             }
@@ -1822,58 +1879,73 @@ function createUserCards(metrics) {
     const container = document.getElementById('userCards');
     container.innerHTML = '';
     
-    // Show top 3 performers
-    const topPerformers = metrics.slice(0, 3);
+    if (!metrics || metrics.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No performance data available.</p>';
+        return;
+    }
+    
+    // Remove duplicates and group by project
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Group by project and find rank #1 per project
+    const projectGroups = {};
+    uniqueEmployees.forEach(employee => {
+        const projectKey = (employee.clientName || '').toLowerCase();
+        if (!projectGroups[projectKey]) {
+            projectGroups[projectKey] = [];
+        }
+        projectGroups[projectKey].push(employee);
+    });
+    
+    // Get rank #1 per project (highest productivity)
+    const topPerformersByProject = [];
+    Object.values(projectGroups).forEach(projectEmployees => {
+        // Sort by productivity descending to get the best performer
+        projectEmployees.sort((a, b) => (b.productivity || 0) - (a.productivity || 0));
+        if (projectEmployees.length > 0) {
+            topPerformersByProject.push(projectEmployees[0]);
+        }
+    });
+    
+    // Sort all top performers by stack ranking points descending
+    topPerformersByProject.sort((a, b) => (b.stackRankingPoints || 0) - (a.stackRankingPoints || 0));
+    
+    // Show top performers (limit to 6 cards)
+    const topPerformers = topPerformersByProject.slice(0, 6);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
         card.className = 'user-card';
         card.innerHTML = `
-            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} ${user.name}</h4>
+            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏆'} ${user.name}</h4>
             <div class="user-info">
                 <div class="info-row">
                     <span class="info-label">Employee ID:</span>
-                    <span class="info-value">${user.employeeId}</span>
+                    <span class="info-value">${user.employeeId || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Client:</span>
-                    <span class="info-value">${user.clientName}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Process:</span>
-                    <span class="info-value">${user.processName || 'N/A'}</span>
+                    <span class="info-label">Client Name:</span>
+                    <span class="info-value">${user.clientName || 'N/A'}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Productivity:</span>
                     <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Target:</span>
-                    <span class="info-value">${(user.target || 0).toLocaleString()}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Utilisation:</span>
-                    <span class="info-value">${user.utilisation}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Stack Ranking:</span>
-                    <span class="info-value">#${user.stackRankingPosition} (${user.stackRankingPoints} pts)</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Team Performance:</span>
-                    <span class="info-value performance-${user.performanceStatus}">${user.teamPerformance}%</span>
-                </div>
-                <div class="info-row">
                     <span class="info-label">Client Errors:</span>
                     <span class="info-value">${user.clientErrors || 0}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Internal Errors:</span>
-                    <span class="info-value">${user.internalErrors || 0}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Hours Worked:</span>
-                    <span class="info-value">${user.hoursWorked || 0}</span>
+                    <span class="info-label">Stack Ranking:</span>
+                    <span class="info-value">#${index + 1}</span>
                 </div>
             </div>
         `;
