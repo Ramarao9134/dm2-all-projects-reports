@@ -373,7 +373,7 @@ function createManagerProjectChart() {
   }
 
   // Data prep - use clientName as project
-  const projects = [...new Set(filteredData.map(d => d.clientName || d.processName || 'Unknown Project'))];
+  const projects = [...new Set(productionData.map(d => d.clientName || d.processName || 'Unknown Project'))];
   if (projects.length === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No project data available</p>';
     return;
@@ -534,12 +534,21 @@ function createManagerIDCards() {
     }
     container.innerHTML = '';
     
-    // Show top 6 performers (same metrics as TL portal but top 6 instead of top 3)
-    const topPerformers = metrics.slice(0, 6);
+    // Remove duplicates by employeeId and show top 6 unique performers
+    const uniquePerformers = [];
+    const seenIds = new Set();
     
-    topPerformers.forEach((user, index) => {
+    for (const user of metrics) {
+        if (!seenIds.has(user.employeeId)) {
+            seenIds.add(user.employeeId);
+            uniquePerformers.push(user);
+            if (uniquePerformers.length >= 6) break;
+        }
+    }
+    
+    uniquePerformers.forEach((user, index) => {
         const card = document.createElement('div');
-        card.className = 'user-card'; // Use same class as TL portal
+        card.className = 'user-card';
         card.innerHTML = `
             <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'} ${user.name}</h4>
             <div class="user-info">
@@ -570,22 +579,6 @@ function createManagerIDCards() {
                 <div class="info-row">
                     <span class="info-label">Stack Ranking:</span>
                     <span class="info-value">#${user.stackRankingPosition} (${user.stackRankingPoints} pts)</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Team Performance:</span>
-                    <span class="info-value performance-${user.performanceStatus}">${user.teamPerformance}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Client Errors:</span>
-                    <span class="info-value">${user.clientErrors || 0}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Internal Errors:</span>
-                    <span class="info-value">${user.internalErrors || 0}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Hours Worked:</span>
-                    <span class="info-value">${user.hoursWorked || 0}</span>
                 </div>
             </div>
         `;
