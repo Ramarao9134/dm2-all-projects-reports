@@ -586,39 +586,73 @@ function createManagerIDCards() {
     }
     container.innerHTML = '';
     
-    // Remove duplicates by employeeId and show top 6 unique performers
-    const uniquePerformers = [];
-    const seenIds = new Set();
-    
-    for (const user of metrics) {
-        if (!seenIds.has(user.employeeId)) {
-            seenIds.add(user.employeeId);
-            uniquePerformers.push(user);
-            if (uniquePerformers.length >= 6) break;
-        }
+    if (!metrics || metrics.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No performance data available.</p>';
+        return;
     }
     
-    uniquePerformers.forEach((user, index) => {
+    // Remove duplicates and group by project (same logic as TL Portal)
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Group by project and find rank #1 per project
+    const projectGroups = {};
+    uniqueEmployees.forEach(employee => {
+        const projectKey = (employee.clientName || '').toLowerCase();
+        if (!projectGroups[projectKey]) {
+            projectGroups[projectKey] = [];
+        }
+        projectGroups[projectKey].push(employee);
+    });
+    
+    // Get rank #1 per project (highest productivity)
+    const topPerformersByProject = [];
+    Object.values(projectGroups).forEach(projectEmployees => {
+        // Sort by productivity descending to get the best performer
+        projectEmployees.sort((a, b) => (b.productivity || 0) - (a.productivity || 0));
+        if (projectEmployees.length > 0) {
+            topPerformersByProject.push(projectEmployees[0]);
+        }
+    });
+    
+    // Sort all top performers by stack ranking points descending
+    topPerformersByProject.sort((a, b) => (b.stackRankingPoints || 0) - (a.stackRankingPoints || 0));
+    
+    // Show top performers (limit to 6 cards for Manager Portal)
+    const topPerformers = topPerformersByProject.slice(0, 6);
+    
+    topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
         card.className = 'user-card';
         card.innerHTML = `
-            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'} ${user.name}</h4>
+            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏆'} ${user.name}</h4>
             <div class="user-info">
                 <div class="info-row">
                     <span class="info-label">Employee ID:</span>
-                    <span class="info-value">${user.employeeId}</span>
+                    <span class="info-value">${user.employeeId || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Client:</span>
-                    <span class="info-value">${user.clientName}</span>
+                    <span class="info-label">Client Name:</span>
+                    <span class="info-value">${user.clientName || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Process:</span>
-                    <span class="info-value">${user.processName || 'N/A'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Productivity:</span>
+                    <span class="info-label">Total Productivity:</span>
                     <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Client Errors:</span>
+                    <span class="info-value">${user.clientErrors || 0}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Stack Ranking:</span>
+                    <span class="info-value">#${index + 1}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Target:</span>
@@ -626,11 +660,11 @@ function createManagerIDCards() {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Utilisation:</span>
-                    <span class="info-value">${user.utilisation}%</span>
+                    <span class="info-value">${user.utilisation || 0}%</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Stack Ranking:</span>
-                    <span class="info-value">#${user.stackRankingPosition} (${user.stackRankingPoints} pts)</span>
+                    <span class="info-label">User Individual Performance:</span>
+                    <span class="info-value">${user.teamPerformance || 0}%</span>
                 </div>
             </div>
         `;
@@ -1918,14 +1952,14 @@ function createUserCards(metrics) {
     // Sort all top performers by stack ranking points descending
     topPerformersByProject.sort((a, b) => (b.stackRankingPoints || 0) - (a.stackRankingPoints || 0));
     
-    // Show top performers (limit to 6 cards)
-    const topPerformers = topPerformersByProject.slice(0, 6);
+    // Show top performers (limit to 3 cards for TL Portal)
+    const topPerformers = topPerformersByProject.slice(0, 3);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
         card.className = 'user-card';
         card.innerHTML = `
-            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏆'} ${user.name}</h4>
+            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} ${user.name}</h4>
             <div class="user-info">
                 <div class="info-row">
                     <span class="info-label">Employee ID:</span>
@@ -1936,7 +1970,7 @@ function createUserCards(metrics) {
                     <span class="info-value">${user.clientName || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Productivity:</span>
+                    <span class="info-label">Total Productivity:</span>
                     <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
                 </div>
                 <div class="info-row">
@@ -1946,6 +1980,18 @@ function createUserCards(metrics) {
                 <div class="info-row">
                     <span class="info-label">Stack Ranking:</span>
                     <span class="info-value">#${index + 1}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Target:</span>
+                    <span class="info-value">${(user.target || 0).toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Utilisation:</span>
+                    <span class="info-value">${user.utilisation || 0}%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">User Individual Performance:</span>
+                    <span class="info-value">${user.teamPerformance || 0}%</span>
                 </div>
             </div>
         `;
