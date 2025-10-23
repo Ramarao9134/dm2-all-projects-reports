@@ -440,11 +440,7 @@ function createManagerProjectChart() {
 function createManagerTeamChart() {
   const container = document.getElementById('managerTeamChart');
   const canvas = document.getElementById('managerTeamCanvas');
-  console.log('Manager team chart - container:', container, 'canvas:', canvas);
-  if (!container || !canvas) { 
-    console.error('Manager team chart elements not found - container:', !!container, 'canvas:', !!canvas); 
-    return; 
-  }
+  if (!container || !canvas) return;
 
   if (typeof Chart === 'undefined') {
     container.innerHTML = '<p style="color:red;padding:20px;">Chart.js not loaded.</p>';
@@ -452,102 +448,45 @@ function createManagerTeamChart() {
   }
 
   if (window.managerTeamChart && typeof window.managerTeamChart.destroy === 'function') {
-    try { window.managerTeamChart.destroy(); } catch(e) { console.warn('team destroy failed', e); }
+    try { window.managerTeamChart.destroy(); } catch (e) {}
   }
 
-  // Get date range filter (same as project chart)
-  const dateRange = document.getElementById('managerDateFilter')?.value || 'month';
-  
-  // Filter data based on date range
-  let filteredData = [...productionData];
-  if (dateRange !== 'custom') {
-    const now = new Date();
-    const filterDate = new Date();
-    
-    switch (dateRange) {
-      case 'week':
-        filterDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        filterDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        filterDate.setMonth(now.getMonth() - 3);
-        break;
-      case 'year':
-        filterDate.setFullYear(now.getFullYear() - 1);
-        break;
+  // 1) Build correct team key and unique member counts
+  const teamMap = new Map();
+  (productionData || []).forEach(d => {
+    const teamName = `${d.clientName || 'Unknown'} - ${d.processName || 'Unknown'}`; // correct key
+    if (!teamMap.has(teamName)) {
+      teamMap.set(teamName, { rows: [], members: new Set() });
     }
-    
-    filteredData = productionData.filter(user => {
-      const userDate = new Date(user.date);
-      return userDate >= filterDate;
-    });
-  }
-
-  // Group by teams (client-process combinations) using filtered data
-  const teamGroups = {};
-  filteredData.forEach(user => {
-    const teamKey = `${user.clientName} - ${user.processName}`;
-    if (!teamGroups[teamKey]) {
-      teamGroups[teamKey] = [];
-    }
-    teamGroups[teamKey].push(user);
+    const t = teamMap.get(teamName);
+    t.rows.push(d);
+    if (d.employeeId) t.members.add(String(d.employeeId).trim());
   });
 
-  // Filter teams to only include those with more than 3 members
-  const teams = Object.keys(teamGroups).filter(team => {
-    // Remove duplicate employees by employeeId to get accurate count
-    const uniqueEmployees = [];
-    const seenIds = new Set();
-    teamGroups[team].forEach(employee => {
-      if (!seenIds.has(employee.employeeId)) {
-        seenIds.add(employee.employeeId);
-        uniqueEmployees.push(employee);
-      }
-    });
-    return uniqueEmployees.length > 3; // Only teams with more than 3 members
-  });
+  // 2) Compute stats and filter to teams with >= 4 unique members
+  const teamStats = Array.from(teamMap.entries())
+    .map(([name, { rows, members }]) => {
+      const uniqueCount = members.size; // real team size (no double count)
+      const totalTarget = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
+      const totalActual = rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
+      const totalErrors = rows.reduce((s, r) => s + (Number(r.clientErrors) || 0) + (Number(r.internalErrors) || 0), 0);
+      const totalLeaves = rows.reduce((s, r) => s + (Number(r.leaves) || 0), 0);
+      const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+      return { name, memberCount: uniqueCount, totalTarget, totalActual, totalErrors, totalLeaves, performance };
+    })
+    .filter(t => t.memberCount >= 4) // only >3 members
+    .sort((a, b) => b.performance - a.performance);
 
-  if (teams.length === 0) {
+  if (teamStats.length === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No teams with more than 3 members available</p>';
     return;
   }
-
-  const teamStats = teams.map(team => {
-    const teamData = teamGroups[team];
-    
-    // Remove duplicate employees by employeeId to prevent double-counting
-    const uniqueEmployees = [];
-    const seenIds = new Set();
-    teamData.forEach(employee => {
-      if (!seenIds.has(employee.employeeId)) {
-        seenIds.add(employee.employeeId);
-        uniqueEmployees.push(employee);
-      }
-    });
-    
-    const totalTarget = uniqueEmployees.reduce((s,d)=>s+(d.target||0),0);
-    const totalActual = uniqueEmployees.reduce((s,d)=>s+(d.productivity||0),0);
-    const totalClientErrors = uniqueEmployees.reduce((s,d)=>s+(d.clientErrors||0),0);
-    const totalInternalErrors = uniqueEmployees.reduce((s,d)=>s+(d.internalErrors||0),0);
-    const performance = totalTarget>0 ? Math.round((totalActual/totalTarget)*100) : 0;
-    return { 
-      name: team, 
-      count: uniqueEmployees.length, 
-      performance, 
-      totalActual, 
-      totalTarget, 
-      totalClientErrors, 
-      totalInternalErrors 
-    };
-  }).sort((a, b) => b.performance - a.performance); // Sort by performance ranking
 
   const ctx2d = canvas.getContext('2d');
   window.managerTeamChart = new Chart(ctx2d, {
     type: 'bar',
     data: {
-      labels: teamStats.map(t => `${t.name} (${t.count} members)`),
+      labels: teamStats.map(t => `${t.name} (${t.memberCount} members)`),
       datasets: [{
         label: 'Team Performance %',
         data: teamStats.map(t => t.performance),
@@ -567,7 +506,7 @@ function createManagerTeamChart() {
         x: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: `Team Performance Rankings (${dateRange === 'month' ? 'This Month' : dateRange === 'quarter' ? 'This Quarter' : dateRange === 'year' ? 'This Year' : 'Custom Range'}) - Teams >3 Members`, font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: 'Team Performance Rankings (≥4 members)', font: { size: 16, weight: 'bold' } },
         legend: { display: false },
         tooltip: {
           callbacks: {
@@ -575,12 +514,12 @@ function createManagerTeamChart() {
               const t = teamStats[c.dataIndex];
               return [
                 `${t.name}`,
-                `Members: ${t.count}`,
+                `Members: ${t.memberCount}`,
                 `Performance: ${t.performance}%`,
                 `Actual: ${t.totalActual.toLocaleString()}`,
                 `Target: ${t.totalTarget.toLocaleString()}`,
-                `Client Errors: ${t.totalClientErrors}`,
-                `Internal Errors: ${t.totalInternalErrors}`
+                `Errors: ${t.totalErrors}`,
+                `Leaves: ${t.totalLeaves}`
               ];
             }
           }
