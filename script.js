@@ -381,10 +381,21 @@ function createManagerProjectChart() {
 
   const projectStats = projects.map(project => {
     const projectData = filteredData.filter(d => (d.clientName || d.processName || 'Unknown Project') === project);
-    const totalActual = projectData.reduce((s, d) => s + (d.productivity || 0), 0);
-    const totalTarget = projectData.reduce((s, d) => s + (d.target || 0), 0);
+    
+    // Remove duplicate employees by employeeId to prevent double-counting
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    projectData.forEach(employee => {
+      if (!seenIds.has(employee.employeeId)) {
+        seenIds.add(employee.employeeId);
+        uniqueEmployees.push(employee);
+      }
+    });
+    
+    const totalActual = uniqueEmployees.reduce((s, d) => s + (d.productivity || 0), 0);
+    const totalTarget = uniqueEmployees.reduce((s, d) => s + (d.target || 0), 0);
     const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
-    return { name: project, count: projectData.length, totalActual, totalTarget, performance };
+    return { name: project, count: uniqueEmployees.length, totalActual, totalTarget, performance };
   });
 
   const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3'];
@@ -444,9 +455,39 @@ function createManagerTeamChart() {
     try { window.managerTeamChart.destroy(); } catch(e) { console.warn('team destroy failed', e); }
   }
 
-  // Group by teams (client-process combinations)
+  // Get date range filter (same as project chart)
+  const dateRange = document.getElementById('managerDateFilter')?.value || 'month';
+  
+  // Filter data based on date range
+  let filteredData = [...productionData];
+  if (dateRange !== 'custom') {
+    const now = new Date();
+    const filterDate = new Date();
+    
+    switch (dateRange) {
+      case 'week':
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        filterDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        filterDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'year':
+        filterDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+    
+    filteredData = productionData.filter(user => {
+      const userDate = new Date(user.date);
+      return userDate >= filterDate;
+    });
+  }
+
+  // Group by teams (client-process combinations) using filtered data
   const teamGroups = {};
-  productionData.forEach(user => {
+  filteredData.forEach(user => {
     const teamKey = `${user.clientName} - ${user.processName}`;
     if (!teamGroups[teamKey]) {
       teamGroups[teamKey] = [];
@@ -454,22 +495,46 @@ function createManagerTeamChart() {
     teamGroups[teamKey].push(user);
   });
 
-  const teams = Object.keys(teamGroups);
+  // Filter teams to only include those with more than 3 members
+  const teams = Object.keys(teamGroups).filter(team => {
+    // Remove duplicate employees by employeeId to get accurate count
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    teamGroups[team].forEach(employee => {
+      if (!seenIds.has(employee.employeeId)) {
+        seenIds.add(employee.employeeId);
+        uniqueEmployees.push(employee);
+      }
+    });
+    return uniqueEmployees.length > 3; // Only teams with more than 3 members
+  });
+
   if (teams.length === 0) {
-    container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No team data available</p>';
+    container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No teams with more than 3 members available</p>';
     return;
   }
 
   const teamStats = teams.map(team => {
     const teamData = teamGroups[team];
-    const totalTarget = teamData.reduce((s,d)=>s+(d.target||0),0);
-    const totalActual = teamData.reduce((s,d)=>s+(d.productivity||0),0);
-    const totalClientErrors = teamData.reduce((s,d)=>s+(d.clientErrors||0),0);
-    const totalInternalErrors = teamData.reduce((s,d)=>s+(d.internalErrors||0),0);
+    
+    // Remove duplicate employees by employeeId to prevent double-counting
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    teamData.forEach(employee => {
+      if (!seenIds.has(employee.employeeId)) {
+        seenIds.add(employee.employeeId);
+        uniqueEmployees.push(employee);
+      }
+    });
+    
+    const totalTarget = uniqueEmployees.reduce((s,d)=>s+(d.target||0),0);
+    const totalActual = uniqueEmployees.reduce((s,d)=>s+(d.productivity||0),0);
+    const totalClientErrors = uniqueEmployees.reduce((s,d)=>s+(d.clientErrors||0),0);
+    const totalInternalErrors = uniqueEmployees.reduce((s,d)=>s+(d.internalErrors||0),0);
     const performance = totalTarget>0 ? Math.round((totalActual/totalTarget)*100) : 0;
     return { 
       name: team, 
-      count: teamData.length, 
+      count: uniqueEmployees.length, 
       performance, 
       totalActual, 
       totalTarget, 
@@ -502,7 +567,7 @@ function createManagerTeamChart() {
         x: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: 'Team Performance Rankings (Top to Bottom)', font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: `Team Performance Rankings (${dateRange === 'month' ? 'This Month' : dateRange === 'quarter' ? 'This Quarter' : dateRange === 'year' ? 'This Year' : 'Custom Range'}) - Teams >3 Members`, font: { size: 16, weight: 'bold' } },
         legend: { display: false },
         tooltip: {
           callbacks: {
