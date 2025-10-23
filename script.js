@@ -372,23 +372,23 @@ function createManagerProjectChart() {
     });
   }
 
-  // Build project map with normalized keys to prevent missing projects
+  // Build project map with normalized keys (project only, no process)
   const projectMap = new Map();
   filteredData.forEach(d => {
-    const clientName = (d.clientName || '').trim();
-    const processName = (d.processName || '').trim();
-    const projectKey = clientName || processName || 'Unknown Project';
-    const normalizedKey = projectKey.toLowerCase();
+    const pKey = (d.clientName || '').trim().toLowerCase();
+    const displayName = (d.clientName || '').trim();
     
-    if (!projectMap.has(normalizedKey)) {
-      projectMap.set(normalizedKey, {
-        displayName: projectKey,
+    if (!pKey) return; // Skip if no client name
+    
+    if (!projectMap.has(pKey)) {
+      projectMap.set(pKey, {
+        displayName: displayName,
         rows: [],
         members: new Set()
       });
     }
     
-    const project = projectMap.get(normalizedKey);
+    const project = projectMap.get(pKey);
     project.rows.push(d);
     if (d.employeeId) {
       project.members.add(String(d.employeeId).trim());
@@ -401,9 +401,9 @@ function createManagerProjectChart() {
   }
 
   // Calculate stats for all projects (no filtering by member count)
-  const projectStats = Array.from(projectMap.entries()).map(([normalizedKey, { displayName, rows, members }]) => {
+  const projectStats = Array.from(projectMap.entries()).map(([pKey, { displayName, rows, members }]) => {
     const memberCount = members.size;
-    const totalActual = rows.reduce((s, r) => s + (Number(r.productivity) || 0), 0);
+    const totalActual = rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
     const totalTarget = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
     const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
     
@@ -469,31 +469,38 @@ function createManagerTeamChart() {
     try { window.managerTeamChart.destroy(); } catch (e) {}
   }
 
-  // 1) Build correct team key and unique member counts
-  const teamMap = new Map();
-  (productionData || []).forEach(d => {
-    const teamName = `${d.clientName || 'Unknown'} - ${d.processName || 'Unknown'}`; // correct key
-    if (!teamMap.has(teamName)) {
-      teamMap.set(teamName, { rows: [], members: new Set() });
+  // 1) Group rows by project key (project only, not client-process)
+  const projectMap = new Map();
+  (productionData || []).forEach(r => {
+    const k = (r.clientName || '').trim().toLowerCase();
+    if (!k) return; // Skip if no client name
+    
+    if (!projectMap.has(k)) {
+      projectMap.set(k, { 
+        displayName: (r.clientName || '').trim(), 
+        rows: [] 
+      });
     }
-    const t = teamMap.get(teamName);
-    t.rows.push(d);
-    if (d.employeeId) t.members.add(String(d.employeeId).trim());
+    projectMap.get(k).rows.push(r);
   });
 
-  // 2) Compute stats and filter to teams with >= 3 unique members
-  const teamStats = Array.from(teamMap.entries())
-    .map(([name, { rows, members }]) => {
-      const uniqueCount = members.size; // real team size (no double count)
-      const totalTarget = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
-      const totalActual = rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
-      const totalErrors = rows.reduce((s, r) => s + (Number(r.clientErrors) || 0) + (Number(r.internalErrors) || 0), 0);
-      const totalLeaves = rows.reduce((s, r) => s + (Number(r.leaves) || 0), 0);
-      const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
-      return { name, memberCount: uniqueCount, totalTarget, totalActual, totalErrors, totalLeaves, performance };
-    })
-    .filter(t => t.memberCount >= 3) // only >=3 members
-    .sort((a, b) => b.performance - a.performance);
+  // 2) Compute stats and filter to projects with >= 3 unique members
+  const teamStats = Array.from(projectMap.values()).map(g => {
+    const totalActual = g.rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
+    const totalTarget = g.rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
+    const members = new Set(g.rows.map(r => String(r.employeeId || '').trim()).filter(Boolean));
+    const memberCount = members.size;
+    const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+    return { 
+      name: g.displayName, 
+      memberCount, 
+      totalActual, 
+      totalTarget, 
+      performance 
+    };
+  })
+  .filter(t => t.memberCount >= 3) // only >=3 members
+  .sort((a, b) => b.performance - a.performance || b.totalActual - a.totalActual || a.name.localeCompare(b.name));
 
   if (teamStats.length === 0) {
     container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No teams with more than 3 members available</p>';
@@ -528,16 +535,14 @@ function createManagerTeamChart() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (c) => {
-              const t = teamStats[c.dataIndex];
+            label: (ctx) => {
+              const t = teamStats[ctx.dataIndex];
               return [
                 `${t.name}`,
                 `Members: ${t.memberCount}`,
                 `Performance: ${t.performance}%`,
                 `Actual: ${t.totalActual.toLocaleString()}`,
-                `Target: ${t.totalTarget.toLocaleString()}`,
-                `Errors: ${t.totalErrors}`,
-                `Leaves: ${t.totalLeaves}`
+                `Target: ${t.totalTarget.toLocaleString()}`
               ];
             }
           }
