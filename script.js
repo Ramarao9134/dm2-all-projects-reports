@@ -591,7 +591,7 @@ function createManagerIDCards() {
         return;
     }
     
-    // Remove duplicates and group by project (same logic as TL Portal)
+    // Remove duplicates and sort by stack ranking points (same logic as Stack Ranking chart)
     const uniqueEmployees = [];
     const seenIds = new Set();
     
@@ -602,31 +602,11 @@ function createManagerIDCards() {
         }
     });
     
-    // Group by project and find rank #1 per project
-    const projectGroups = {};
-    uniqueEmployees.forEach(employee => {
-        const projectKey = (employee.clientName || '').toLowerCase();
-        if (!projectGroups[projectKey]) {
-            projectGroups[projectKey] = [];
-        }
-        projectGroups[projectKey].push(employee);
-    });
+    // Sort by stack ranking points descending (same as Stack Ranking chart)
+    uniqueEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
     
-    // Get rank #1 per project (highest productivity)
-    const topPerformersByProject = [];
-    Object.values(projectGroups).forEach(projectEmployees => {
-        // Sort by productivity descending to get the best performer
-        projectEmployees.sort((a, b) => (b.productivity || 0) - (a.productivity || 0));
-        if (projectEmployees.length > 0) {
-            topPerformersByProject.push(projectEmployees[0]);
-        }
-    });
-    
-    // Sort all top performers by stack ranking points descending
-    topPerformersByProject.sort((a, b) => (b.stackRankingPoints || 0) - (a.stackRankingPoints || 0));
-    
-    // Show top performers (limit to 6 cards for Manager Portal)
-    const topPerformers = topPerformersByProject.slice(0, 6);
+    // Show top 6 performers from Stack Ranking chart (Manager Portal)
+    const topPerformers = uniqueEmployees.slice(0, 6);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -639,7 +619,7 @@ function createManagerIDCards() {
                     <span class="info-value">${user.employeeId || 'N/A'}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Client Name:</span>
+                    <span class="info-label">Client/Project Name:</span>
                     <span class="info-value">${user.clientName || 'N/A'}</span>
                 </div>
                 <div class="info-row">
@@ -657,14 +637,6 @@ function createManagerIDCards() {
                 <div class="info-row">
                     <span class="info-label">Target:</span>
                     <span class="info-value">${(user.target || 0).toLocaleString()}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Utilisation:</span>
-                    <span class="info-value">${user.utilisation || 0}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">User Individual Performance:</span>
-                    <span class="info-value">${user.teamPerformance || 0}%</span>
                 </div>
             </div>
         `;
@@ -1918,41 +1890,22 @@ function createUserCards(metrics) {
         return;
     }
     
-    // Group all records by employeeId to calculate total productivity
-    const employeeGroups = {};
+    // Remove duplicates and sort by stack ranking points (same logic as Stack Ranking chart)
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
     metrics.forEach(employee => {
-        const empId = employee.employeeId;
-        if (!employeeGroups[empId]) {
-            employeeGroups[empId] = {
-                employeeId: empId,
-                name: employee.name,
-                clientName: employee.clientName,
-                target: employee.target || 0,
-                clientErrors: employee.clientErrors || 0,
-                utilisation: employee.utilisation || 0,
-                stackRankingPoints: employee.stackRankingPoints || 0,
-                totalProductivity: 0
-            };
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
         }
-        // Sum productivity across all projects/tasks for this employee
-        employeeGroups[empId].totalProductivity += (employee.productivity || 0);
     });
     
-    // Convert to array and calculate ranking score
-    const employeesWithRanking = Object.values(employeeGroups).map(emp => {
-        // Calculate combined ranking score: (utilisation * 0.6) + (stackRankingPoints * 0.4)
-        const rankingScore = (emp.utilisation * 0.6) + (emp.stackRankingPoints * 0.4);
-        return {
-            ...emp,
-            rankingScore: rankingScore
-        };
-    });
+    // Sort by stack ranking points descending (same as Stack Ranking chart)
+    uniqueEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
     
-    // Sort by ranking score descending (best performers first)
-    employeesWithRanking.sort((a, b) => b.rankingScore - a.rankingScore);
-    
-    // Show top 3 performers
-    const topPerformers = employeesWithRanking.slice(0, 3);
+    // Show top 3 performers from Stack Ranking chart
+    const topPerformers = uniqueEmployees.slice(0, 3);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -1970,11 +1923,11 @@ function createUserCards(metrics) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Total Productivity:</span>
-                    <span class="info-value">${user.totalProductivity.toLocaleString()}</span>
+                    <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Client Errors:</span>
-                    <span class="info-value">${user.clientErrors}</span>
+                    <span class="info-value">${user.clientErrors || 0}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Stack Ranking:</span>
@@ -1982,7 +1935,7 @@ function createUserCards(metrics) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Target:</span>
-                    <span class="info-value">${user.target.toLocaleString()}</span>
+                    <span class="info-value">${(user.target || 0).toLocaleString()}</span>
                 </div>
             </div>
         `;
