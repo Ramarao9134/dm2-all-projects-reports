@@ -343,25 +343,25 @@ function createManagerProjectChart() {
   }
 
   // Get date range filter
-  const dateRange = document.getElementById('managerDateRange')?.value || 'This Month';
+  const dateRange = document.getElementById('managerDateFilter')?.value || 'month';
   
   // Filter data based on date range
   let filteredData = [...productionData];
-  if (dateRange !== 'All Time') {
+  if (dateRange !== 'custom') {
     const now = new Date();
     const filterDate = new Date();
     
     switch (dateRange) {
-      case 'This Week':
+      case 'week':
         filterDate.setDate(now.getDate() - 7);
         break;
-      case 'This Month':
+      case 'month':
         filterDate.setMonth(now.getMonth() - 1);
         break;
-      case 'This Quarter':
+      case 'quarter':
         filterDate.setMonth(now.getMonth() - 3);
         break;
-      case 'This Year':
+      case 'year':
         filterDate.setFullYear(now.getFullYear() - 1);
         break;
     }
@@ -405,7 +405,7 @@ function createManagerProjectChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: `All Projects Performance Overview (${dateRange})`, font: { size: 16, weight: 'bold' } },
+        title: { display: true, text: `All Projects Performance Overview (${dateRange === 'month' ? 'This Month' : dateRange === 'quarter' ? 'This Quarter' : dateRange === 'year' ? 'This Year' : 'Custom Range'})`, font: { size: 16, weight: 'bold' } },
         legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
         tooltip: {
           callbacks: {
@@ -528,97 +528,64 @@ function createManagerTeamChart() {
 function createManagerIDCards() {
     const metrics = calculateMetrics();
     const container = document.getElementById('managerTopPerformers');
+    if (!container) {
+        console.error('Manager top performers container not found');
+        return;
+    }
     container.innerHTML = '';
     
-    // Group by project/client
-    const projectGroups = {};
-    metrics.forEach(user => {
-        const projectKey = user.clientName || user.processName || 'Unknown Project';
-        if (!projectGroups[projectKey]) {
-            projectGroups[projectKey] = [];
-        }
-        projectGroups[projectKey].push(user);
-    });
+    // Show top 6 performers (same metrics as TL portal but top 6 instead of top 3)
+    const topPerformers = metrics.slice(0, 6);
     
-    // Create ID cards for each project's top performer (max 6 cards)
-    const projectNames = Object.keys(projectGroups).sort((a, b) => {
-        const aTopPerformer = projectGroups[a][0];
-        const bTopPerformer = projectGroups[b][0];
-        return (bTopPerformer?.stackRankingPoints || 0) - (aTopPerformer?.stackRankingPoints || 0);
-    }).slice(0, 6);
-    
-    projectNames.forEach((projectName, index) => {
-        const projectUsers = projectGroups[projectName];
-        if (!projectUsers || projectUsers.length === 0) return;
-        
-        const topPerformer = projectUsers[0]; // Already sorted by stack ranking points
-        
-        // before appending, build a stable id
-        const cardId = `tp-${projectName.replace(/\W+/g,'-').toLowerCase()}-${topPerformer.employeeId}`;
-        if (document.getElementById(cardId)) {
-          // already exists (defensive)
-          return;
-        }
-        
+    topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
-        card.id = cardId;                        // NEW
-        card.className = 'manager-id-card';
-        
-        const medalIcons = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅'];
-        
+        card.className = 'user-card'; // Use same class as TL portal
         card.innerHTML = `
-            <div class="card-header">
-                <h4>${topPerformer.name}</h4>
-                <div class="medal-icon">${medalIcons[index] || '🏅'}</div>
-            </div>
-            <div class="card-body">
-                <div class="employee-info">
-                    <div class="info-row">
-                        <span class="info-label">Employee ID:</span>
-                        <span class="info-value">${topPerformer.employeeId}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Client:</span>
-                        <span class="info-value">${topPerformer.clientName}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Process:</span>
-                        <span class="info-value">${topPerformer.processName || 'N/A'}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Productivity:</span>
-                        <span class="info-value">${(topPerformer.productivity || 0).toLocaleString()}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Target:</span>
-                        <span class="info-value">${(topPerformer.target || 0).toLocaleString()}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Utilisation Position:</span>
-                        <span class="info-value rank-${topPerformer.utilisationPosition}">#${topPerformer.utilisationPosition}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Stack Ranking Position:</span>
-                        <span class="info-value rank-${topPerformer.stackRankingPosition}">#${topPerformer.stackRankingPosition}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Top Performance Status:</span>
-                        <span class="info-value performance-${topPerformer.performanceStatus}">${topPerformer.performanceStatus.toUpperCase()}</span>
-                    </div>
+            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'} ${user.name}</h4>
+            <div class="user-info">
+                <div class="info-row">
+                    <span class="info-label">Employee ID:</span>
+                    <span class="info-value">${user.employeeId}</span>
                 </div>
-                <div class="performance-stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Utilisation:</span>
-                        <span class="stat-value">${topPerformer.utilisation || 0}%</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Stack Points:</span>
-                        <span class="stat-value">${topPerformer.stackRankingPoints || 0}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Team Performance:</span>
-                        <span class="stat-value">${topPerformer.teamPerformance || 0}%</span>
-                    </div>
+                <div class="info-row">
+                    <span class="info-label">Client:</span>
+                    <span class="info-value">${user.clientName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Process:</span>
+                    <span class="info-value">${user.processName || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Productivity:</span>
+                    <span class="info-value">${(user.productivity || 0).toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Target:</span>
+                    <span class="info-value">${(user.target || 0).toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Utilisation:</span>
+                    <span class="info-value">${user.utilisation}%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Stack Ranking:</span>
+                    <span class="info-value">#${user.stackRankingPosition} (${user.stackRankingPoints} pts)</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Team Performance:</span>
+                    <span class="info-value performance-${user.performanceStatus}">${user.teamPerformance}%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Client Errors:</span>
+                    <span class="info-value">${user.clientErrors || 0}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Internal Errors:</span>
+                    <span class="info-value">${user.internalErrors || 0}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hours Worked:</span>
+                    <span class="info-value">${user.hoursWorked || 0}</span>
                 </div>
             </div>
         `;
