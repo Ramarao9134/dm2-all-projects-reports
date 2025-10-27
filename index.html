@@ -108,11 +108,11 @@
         
         <div class="manager-content">
             <div class="filters-section">
-                <h2>Data Filters</h2>
+                <h2>Data Filters & Project Selection</h2>
                 <div class="filter-controls">
                     <div class="form-group">
                         <label for="managerProjectFilter">Project:</label>
-                        <select id="managerProjectFilter">
+                        <select id="managerProjectFilter" onchange="loadManagerData()">
                             <option value="">All Projects</option>
                         </select>
                     </div>
@@ -124,7 +124,7 @@
                     </div>
                     <div class="form-group">
                         <label for="managerDateFilter">Date Range:</label>
-                        <select id="managerDateFilter">
+                        <select id="managerDateFilter" onchange="loadManagerData()">
                             <option value="month">This Month</option>
                             <option value="quarter">This Quarter</option>
                             <option value="year">This Year</option>
@@ -222,8 +222,14 @@
             </div>
             
             <div class="date-filter-section">
-                <h2>Data Analysis Period</h2>
+                <h2>Data Analysis & Filters</h2>
                 <div class="date-controls">
+                    <div class="form-group">
+                        <label for="projectFilter">Select Project:</label>
+                        <select id="projectFilter" onchange="loadProductionData()">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label for="dateFilter">Select Period:</label>
                         <select id="dateFilter" onchange="updateDateInputs()">

@@ -53,20 +53,89 @@ const sampleProductionData = [
     { date: '4/21/2025', employeeId: 'ITPL8326', name: 'Uday Kiran Y', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 }
 ];
 
-// Initialize the application
+// Enhanced initialization with better error handling
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for required libraries
+    checkRequiredLibraries();
+    
     // Clear old cached sample data only if schema changed
     if (!localStorage.getItem('dm2_production_data')) {
         localStorage.removeItem('dm2_production_data');
     }
-    initializeApp();
+    
+    // Initialize with error handling
+    try {
+        initializeApp();
+    } catch (error) {
+        console.error('Initialization failed:', error);
+        showInitializationError(error);
+    }
 });
+
+function checkRequiredLibraries() {
+    const missingLibraries = [];
+    
+    if (typeof Chart === 'undefined') {
+        missingLibraries.push('Chart.js');
+    }
+    
+    if (typeof XLSX === 'undefined') {
+        missingLibraries.push('SheetJS (XLSX)');
+    }
+    
+    if (missingLibraries.length > 0) {
+        console.warn('Missing libraries:', missingLibraries);
+        // Don't block initialization, but show warning
+        setTimeout(() => {
+            if (missingLibraries.includes('Chart.js')) {
+                console.error('Chart.js not loaded - charts will not work');
+            }
+            if (missingLibraries.includes('SheetJS (XLSX)')) {
+                console.error('SheetJS not loaded - Excel upload will not work');
+            }
+        }, 1000);
+    }
+}
+
+function showInitializationError(error) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc3545;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 10000;
+        max-width: 300px;
+    `;
+    errorDiv.innerHTML = `
+        <strong>Initialization Error</strong><br>
+        ${error.message}<br>
+        <small>Please refresh the page or check your internet connection.</small>
+    `;
+    document.body.appendChild(errorDiv);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
+    }, 10000);
+}
 
 function initializeApp() {
     // Load users from localStorage or use sample data
     const savedUsers = localStorage.getItem('dm2_users');
     if (savedUsers) {
-        users = JSON.parse(savedUsers);
+        try {
+            users = JSON.parse(savedUsers);
+        } catch (error) {
+            console.warn('Failed to parse users data, using sample data:', error);
+            users = [...sampleUsers];
+            localStorage.setItem('dm2_users', JSON.stringify(users));
+        }
     } else {
         users = [...sampleUsers];
         localStorage.setItem('dm2_users', JSON.stringify(users));
@@ -77,8 +146,10 @@ function initializeApp() {
     if (existing) {
         try {
             productionData = JSON.parse(existing) || [];
-        } catch (_) {
+        } catch (error) {
+            console.warn('Failed to parse production data, using sample data:', error);
             productionData = [...sampleProductionData];
+            localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
         }
     } else {
         productionData = [...sampleProductionData];
@@ -88,13 +159,52 @@ function initializeApp() {
     // Load feedback messages
     const savedFeedback = localStorage.getItem('dm2_feedback');
     if (savedFeedback) {
-        feedbackMessages = JSON.parse(savedFeedback);
+        try {
+            feedbackMessages = JSON.parse(savedFeedback);
+        } catch (error) {
+            console.warn('Failed to parse feedback data:', error);
+            feedbackMessages = [];
+        }
     }
     
     // Set up event listeners
     setupEventListeners();
     
-    // Show login page
+    // Check for existing session
+    checkExistingSession();
+}
+
+function checkExistingSession() {
+    try {
+        const sessionData = sessionStorage.getItem('dm2_current_user');
+        if (sessionData) {
+            const session = JSON.parse(sessionData);
+            const user = users.find(u => u.email === session.email);
+            
+            if (user && user.status === 'active') {
+                currentUser = user;
+                console.log('Restored session for:', user.email);
+                
+                // Redirect to appropriate page
+                switch(user.role) {
+                    case 'admin':
+                        showPage('adminPage');
+                        return;
+                    case 'manager':
+                        showPage('managerPage');
+                        return;
+                    case 'tl':
+                        showPage('tlPage');
+                        return;
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to restore session:', error);
+        sessionStorage.removeItem('dm2_current_user');
+    }
+    
+    // If no valid session, show login page
     showPage('loginPage');
 }
 
@@ -144,20 +254,44 @@ function showPage(pageId) {
     }
 }
 
-// Login Functionality
+// Login Functionality with enhanced error handling
 function handleLogin(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
     
-    // Find user
-    const user = users.find(u => u.email === email && u.password === password);
+    // Clear previous errors
+    errorDiv.classList.remove('show');
+    errorDiv.textContent = '';
+    
+    // Basic validation
+    if (!email || !password) {
+        errorDiv.textContent = 'Please enter both email and password';
+        errorDiv.classList.add('show');
+        return;
+    }
+    
+    // Find user with case-insensitive email comparison
+    const user = users.find(u => 
+        u.email.toLowerCase() === email.toLowerCase() && 
+        u.password === password
+    );
     
     if (user && user.status === 'active') {
         currentUser = user;
-        errorDiv.classList.remove('show');
+        
+        // Store login state for persistence across page refreshes
+        try {
+            sessionStorage.setItem('dm2_current_user', JSON.stringify({
+                email: user.email,
+                role: user.role,
+                loginTime: new Date().toISOString()
+            }));
+        } catch (error) {
+            console.warn('Could not save login state:', error);
+        }
         
         // Redirect based on role
         switch(user.role) {
@@ -170,18 +304,42 @@ function handleLogin(e) {
             case 'tl':
                 showPage('tlPage');
                 break;
+            default:
+                errorDiv.textContent = 'Invalid user role';
+                errorDiv.classList.add('show');
+                return;
         }
+        
+        console.log('Login successful for:', user.email, 'Role:', user.role);
     } else {
         errorDiv.textContent = 'Invalid email or password';
         errorDiv.classList.add('show');
+        console.log('Login failed for:', email);
     }
 }
 
 // Logout Functionality
 function logout() {
     currentUser = null;
+    
+    // Clear session data
+    try {
+        sessionStorage.removeItem('dm2_current_user');
+    } catch (error) {
+        console.warn('Could not clear session data:', error);
+    }
+    
     showPage('loginPage');
     document.getElementById('loginForm').reset();
+    
+    // Clear any error messages
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) {
+        errorDiv.classList.remove('show');
+        errorDiv.textContent = '';
+    }
+    
+    console.log('User logged out successfully');
 }
 
 // Admin Portal Functions
@@ -313,17 +471,25 @@ function loadManagerData() {
         console.log('Manager using sample data:', productionData.length, 'records');
     }
     
-    // Create charts with real data
-    createManagerProjectChart();
-    createManagerTeamChart();
+    // Apply project filter if selected
+    let filteredData = [...productionData];
+    const projectFilter = document.getElementById('managerProjectFilter');
+    if (projectFilter && projectFilter.value) {
+        filteredData = productionData.filter(d => d.clientName === projectFilter.value);
+        console.log('Manager filtered by project:', projectFilter.value, 'Records:', filteredData.length);
+    }
+    
+    // Create charts with filtered data
+    createManagerProjectChart(filteredData);
+    createManagerTeamChart(filteredData);
     
     // Create manager ID cards with top performers
-    createManagerIDCards();
+    createManagerIDCards(filteredData);
     
     console.log('Manager data loading complete');
 }
 
-function createManagerProjectChart() {
+function createManagerProjectChart(dataToProcess = null) {
   const container = document.getElementById('managerProjectChart');
   if (!container) {
     console.error('Manager project chart container not found');
@@ -360,11 +526,14 @@ function createManagerProjectChart() {
     }
   }
 
+  // Use provided data or fallback to global productionData
+  const data = dataToProcess || productionData;
+
   // Get date range filter
   const dateRange = document.getElementById('managerDateFilter')?.value || 'month';
   
   // Filter data based on date range
-  let filteredData = [...productionData];
+  let filteredData = [...data];
   if (dateRange !== 'custom') {
     const now = new Date();
     const filterDate = new Date();
@@ -384,7 +553,7 @@ function createManagerProjectChart() {
         break;
     }
     
-    filteredData = productionData.filter(user => {
+    filteredData = data.filter(user => {
       const userDate = new Date(user.date);
       return userDate >= filterDate;
     });
@@ -480,7 +649,7 @@ function createManagerProjectChart() {
   });
 }
 
-function createManagerTeamChart() {
+function createManagerTeamChart(dataToProcess = null) {
   const container = document.getElementById('managerTeamChart');
   const canvas = document.getElementById('managerTeamCanvas');
   if (!container || !canvas) return;
@@ -494,9 +663,12 @@ function createManagerTeamChart() {
     try { window.managerTeamChart.destroy(); } catch (e) {}
   }
 
+  // Use provided data or fallback to global productionData
+  const data = dataToProcess || productionData;
+
   // 1) Group rows by project key (project only, not client-process)
   const projectMap = new Map();
-  (productionData || []).forEach(r => {
+  (data || []).forEach(r => {
     const k = (r.clientName || '').trim().toLowerCase();
     if (!k) return; // Skip if no client name
     
@@ -577,8 +749,10 @@ function createManagerTeamChart() {
   });
 }
 
-function createManagerIDCards() {
-    const metrics = calculateMetrics();
+function createManagerIDCards(dataToProcess = null) {
+    // Use provided data or fallback to global productionData
+    const data = dataToProcess || productionData;
+    const metrics = calculateMetrics(data);
     const container = document.getElementById('managerTopPerformers');
     if (!container) {
         console.error('Manager top performers container not found');
@@ -780,6 +954,9 @@ function loadTLPage() {
         // Create sample feedback if none exists
         createSampleFeedback();
         
+        // Load project filters
+        loadTLProjectFilters();
+        
         // Load data and show it
         loadProductionData();
         loadFeedbackMessages();
@@ -796,6 +973,30 @@ function loadTLPage() {
         // Show data status
         showDataStatus();
     }
+}
+
+function loadTLProjectFilters() {
+    // Load projects for TL portal
+    const projectFilter = document.getElementById('projectFilter');
+    if (!projectFilter) return;
+    
+    // Get unique projects from production data
+    const projects = [...new Set(productionData.map(d => d.clientName).filter(Boolean))];
+    projectFilter.innerHTML = '<option value="">All Projects</option>';
+    projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project;
+        option.textContent = project;
+        projectFilter.appendChild(option);
+    });
+    
+    console.log('Loaded TL project filters:', projects.length, 'projects');
+}
+
+function refreshProjectFilters() {
+    // Refresh project filters for both TL and Manager portals
+    loadTLProjectFilters();
+    loadManagerFilters();
 }
 
 function createSampleFeedback() {
@@ -914,6 +1115,9 @@ function openGoogleSheets() {
             localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
             loadProductionData();
             alert('✅ Successfully loaded ' + mapped.length + ' records from Google Sheets!');
+            
+            // Refresh project filters after data update
+            refreshProjectFilters();
         })
             .catch(err => {
                 console.error('Google Sheets fetch failed:', err);
@@ -983,6 +1187,9 @@ function handleExcelUpload(e) {
             localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
             loadProductionData();
             alert('✅ Excel uploaded successfully! Loaded ' + mapped.length + ' employee records.');
+            
+            // Refresh project filters after data update
+            refreshProjectFilters();
         })
         .catch((err) => {
             console.error('Excel parse failed', err);
@@ -1162,8 +1369,16 @@ function loadProductionData() {
         console.log('Using sample data:', productionData.length, 'records');
     }
     
-    // Calculate metrics with the updated data
-    const metrics = calculateMetrics();
+    // Apply project filter if selected
+    let filteredData = [...productionData];
+    const projectFilter = document.getElementById('projectFilter');
+    if (projectFilter && projectFilter.value) {
+        filteredData = productionData.filter(d => d.clientName === projectFilter.value);
+        console.log('Filtered by project:', projectFilter.value, 'Records:', filteredData.length);
+    }
+    
+    // Calculate metrics with the filtered data
+    const metrics = calculateMetrics(filteredData);
     console.log('Calculated metrics:', metrics.length, 'records');
     
     if (!metrics.length) {
@@ -1186,10 +1401,13 @@ function loadProductionData() {
     console.log('Data loading complete!');
 }
 
-function calculateMetrics() {
+function calculateMetrics(dataToProcess = null) {
+    // Use provided data or fallback to global productionData
+    const data = dataToProcess || productionData;
+    
     // Group users by client/process to form teams
     const teamGroups = {};
-    (productionData || []).forEach(user => {
+    (data || []).forEach(user => {
         const teamKey = `${user.clientName} - ${user.processName}`;
         if (!teamGroups[teamKey]) {
             teamGroups[teamKey] = [];
@@ -1622,7 +1840,7 @@ function createUtilisationChart(metrics) {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.error('Chart.js library not loaded');
-        ctx.innerHTML = '<p style="color: red; padding: 20px;">Chart.js library not loaded. Please check internet connection.</p>';
+        ctx.innerHTML = '<p style="color: red; padding: 20px;">Chart.js library not loaded. Please check internet connection and refresh the page.</p>';
         return;
     }
     
@@ -1637,11 +1855,19 @@ function createUtilisationChart(metrics) {
         return;
     }
     
+    // Validate metrics data
+    const validMetrics = metrics.filter(m => m && typeof m.utilisation === 'number' && !isNaN(m.utilisation));
+    if (validMetrics.length === 0) {
+        console.warn('No valid metrics data for utilisation chart');
+        ctx.innerHTML = '<p style="color: #666; padding: 20px; text-align: center;">No valid data available for utilisation chart</p>';
+        return;
+    }
+    
     // Remove duplicates and sort by utilisation descending
     const uniqueEmployees = [];
     const seenIds = new Set();
     
-    metrics.forEach(employee => {
+    validMetrics.forEach(employee => {
         if (!seenIds.has(employee.employeeId)) {
             seenIds.add(employee.employeeId);
             uniqueEmployees.push(employee);
