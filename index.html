@@ -124,12 +124,15 @@
                     </div>
                     <div class="form-group">
                         <label for="managerDateFilter">Date Range:</label>
-                        <select id="managerDateFilter" onchange="loadManagerData()">
-                            <option value="month">This Month</option>
-                            <option value="quarter">This Quarter</option>
-                            <option value="year">This Year</option>
-                            <option value="custom">Custom Range</option>
+                        <select id="managerDateFilter" onchange="updateManagerDateInputs()">
+                            <option value="">Select Period Type</option>
+                            <option value="month">Monthly</option>
+                            <option value="date">Date Range</option>
+                            <option value="year">Yearly</option>
                         </select>
+                    </div>
+                    <div id="managerDateInputs" class="date-inputs">
+                        <p style="color: #666; font-style: italic;">Please select a period type above</p>
                     </div>
                     <button onclick="loadManagerData()" class="btn btn-primary">Load Data</button>
                 </div>

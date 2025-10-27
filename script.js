@@ -794,38 +794,39 @@ function createManagerIDCards(dataToProcess = null) {
                 target: employee.target || 0,
                 clientErrors: employee.clientErrors || 0,
                 stackRankingPoints: employee.stackRankingPoints || 0,
-                totalProductivity: 0
+                totalProductivity: 0,
+                utilisation: employee.utilisation || 0,
+                teamPerformance: employee.teamPerformance || 0
             };
         }
         // Sum productivity across all projects/tasks for this employee
         employeeGroups[empId].totalProductivity += (employee.productivity || 0);
-    });
-    
-    // Group by project and find top performer from each project
-    const projectGroups = {};
-    Object.values(employeeGroups).forEach(employee => {
-        const projectKey = (employee.clientName || '').toLowerCase();
-        if (!projectGroups[projectKey]) {
-            projectGroups[projectKey] = [];
+        // Use the highest values for other metrics
+        if (employee.utilisation > employeeGroups[empId].utilisation) {
+            employeeGroups[empId].utilisation = employee.utilisation;
         }
-        projectGroups[projectKey].push(employee);
-    });
-    
-    // Get top performer from each project (highest stack ranking points)
-    const topPerformersByProject = [];
-    Object.values(projectGroups).forEach(projectEmployees => {
-        // Sort by stack ranking points descending to get the best performer
-        projectEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
-        if (projectEmployees.length > 0) {
-            topPerformersByProject.push(projectEmployees[0]);
+        if (employee.teamPerformance > employeeGroups[empId].teamPerformance) {
+            employeeGroups[empId].teamPerformance = employee.teamPerformance;
         }
     });
     
-    // Sort all top performers by stack ranking points descending
-    topPerformersByProject.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
+    // Convert to array and sort by total productivity (overall performance)
+    const allEmployees = Object.values(employeeGroups);
+    allEmployees.sort((a, b) => {
+        // Primary sort: total productivity
+        if (b.totalProductivity !== a.totalProductivity) {
+            return b.totalProductivity - a.totalProductivity;
+        }
+        // Secondary sort: stack ranking points
+        if (b.stackRankingPoints !== a.stackRankingPoints) {
+            return b.stackRankingPoints - a.stackRankingPoints;
+        }
+        // Tertiary sort: utilisation
+        return b.utilisation - a.utilisation;
+    });
     
-    // Show top 6 performers (one from each project) - Manager Portal
-    const topPerformers = topPerformersByProject.slice(0, 6);
+    // Show top 6 performers (overall calculation)
+    const topPerformers = allEmployees.slice(0, 6);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -854,8 +855,12 @@ function createManagerIDCards(dataToProcess = null) {
                     <span class="info-value">#${index + 1}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Target:</span>
-                    <span class="info-value">${user.target.toLocaleString()}</span>
+                    <span class="info-label">Utilisation:</span>
+                    <span class="info-value">${user.utilisation.toFixed(1)}%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Team Performance:</span>
+                    <span class="info-value">${user.teamPerformance.toFixed(1)}%</span>
                 </div>
             </div>
         `;
@@ -1416,6 +1421,47 @@ function applyDateFilter(data) {
     return filteredData;
 }
 
+function updateManagerDateInputs() {
+    const dateFilter = document.getElementById('managerDateFilter').value;
+    const dateInputs = document.getElementById('managerDateInputs');
+    
+    dateInputs.innerHTML = '';
+    
+    switch(dateFilter) {
+        case 'month':
+            dateInputs.innerHTML = `
+                <div class="form-group">
+                    <label for="managerSelectedMonth">Month:</label>
+                    <input type="month" id="managerSelectedMonth" value="" onchange="loadManagerData()">
+                </div>
+            `;
+            break;
+        case 'date':
+            dateInputs.innerHTML = `
+                <div class="form-group">
+                    <label for="managerStartDate">Start Date:</label>
+                    <input type="date" id="managerStartDate" value="" onchange="loadManagerData()">
+                </div>
+                <div class="form-group">
+                    <label for="managerEndDate">End Date:</label>
+                    <input type="date" id="managerEndDate" value="" onchange="loadManagerData()">
+                </div>
+            `;
+            break;
+        case 'year':
+            dateInputs.innerHTML = `
+                <div class="form-group">
+                    <label for="managerSelectedYear">Year:</label>
+                    <input type="number" id="managerSelectedYear" value="" min="2020" max="2030" placeholder="Enter year" onchange="loadManagerData()">
+                </div>
+            `;
+            break;
+        default:
+            dateInputs.innerHTML = '<p style="color: #666; font-style: italic;">Please select a period type above</p>';
+            break;
+    }
+}
+
 function applyManagerDateFilter(data) {
     const dateFilter = document.getElementById('managerDateFilter');
     if (!dateFilter || !dateFilter.value) {
@@ -1425,54 +1471,45 @@ function applyManagerDateFilter(data) {
     let filteredData = [...data];
     
     switch(dateFilter.value) {
-        case 'week':
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            filteredData = data.filter(d => {
-                if (!d.date) return false;
-                const recordDate = new Date(d.date);
-                return recordDate >= weekAgo;
-            });
-            console.log('Manager filtered by week:', 'Records:', filteredData.length);
-            break;
-            
         case 'month':
-            const monthAgo = new Date();
-            monthAgo.setMonth(monthAgo.getMonth() - 1);
-            filteredData = data.filter(d => {
-                if (!d.date) return false;
-                const recordDate = new Date(d.date);
-                return recordDate >= monthAgo;
-            });
-            console.log('Manager filtered by month:', 'Records:', filteredData.length);
+            const selectedMonth = document.getElementById('managerSelectedMonth');
+            if (selectedMonth && selectedMonth.value) {
+                const [year, month] = selectedMonth.value.split('-');
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate.getFullYear() == year && recordDate.getMonth() == (month - 1);
+                });
+                console.log('Manager filtered by month:', selectedMonth.value, 'Records:', filteredData.length);
+            }
             break;
             
-        case 'quarter':
-            const quarterAgo = new Date();
-            quarterAgo.setMonth(quarterAgo.getMonth() - 3);
-            filteredData = data.filter(d => {
-                if (!d.date) return false;
-                const recordDate = new Date(d.date);
-                return recordDate >= quarterAgo;
-            });
-            console.log('Manager filtered by quarter:', 'Records:', filteredData.length);
+        case 'date':
+            const startDate = document.getElementById('managerStartDate');
+            const endDate = document.getElementById('managerEndDate');
+            if (startDate && startDate.value && endDate && endDate.value) {
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate >= start && recordDate <= end;
+                });
+                console.log('Manager filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
+            }
             break;
             
         case 'year':
-            const yearAgo = new Date();
-            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-            filteredData = data.filter(d => {
-                if (!d.date) return false;
-                const recordDate = new Date(d.date);
-                return recordDate >= yearAgo;
-            });
-            console.log('Manager filtered by year:', 'Records:', filteredData.length);
-            break;
-            
-        case 'custom':
-            // For custom range, we would need to add custom date inputs to Manager portal
-            // For now, return all data
-            console.log('Manager custom date range - returning all data');
+            const selectedYear = document.getElementById('managerSelectedYear');
+            if (selectedYear && selectedYear.value) {
+                const year = parseInt(selectedYear.value);
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate.getFullYear() === year;
+                });
+                console.log('Manager filtered by year:', year, 'Records:', filteredData.length);
+            }
             break;
     }
     
@@ -2293,38 +2330,39 @@ function createUserCards(metrics) {
                 target: employee.target || 0,
                 clientErrors: employee.clientErrors || 0,
                 stackRankingPoints: employee.stackRankingPoints || 0,
-                totalProductivity: 0
+                totalProductivity: 0,
+                utilisation: employee.utilisation || 0,
+                teamPerformance: employee.teamPerformance || 0
             };
         }
         // Sum productivity across all projects/tasks for this employee
         employeeGroups[empId].totalProductivity += (employee.productivity || 0);
-    });
-    
-    // Group by project and find top performer from each project
-    const projectGroups = {};
-    Object.values(employeeGroups).forEach(employee => {
-        const projectKey = (employee.clientName || '').toLowerCase();
-        if (!projectGroups[projectKey]) {
-            projectGroups[projectKey] = [];
+        // Use the highest values for other metrics
+        if (employee.utilisation > employeeGroups[empId].utilisation) {
+            employeeGroups[empId].utilisation = employee.utilisation;
         }
-        projectGroups[projectKey].push(employee);
-    });
-    
-    // Get top performer from each project (highest stack ranking points)
-    const topPerformersByProject = [];
-    Object.values(projectGroups).forEach(projectEmployees => {
-        // Sort by stack ranking points descending to get the best performer
-        projectEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
-        if (projectEmployees.length > 0) {
-            topPerformersByProject.push(projectEmployees[0]);
+        if (employee.teamPerformance > employeeGroups[empId].teamPerformance) {
+            employeeGroups[empId].teamPerformance = employee.teamPerformance;
         }
     });
     
-    // Sort all top performers by stack ranking points descending
-    topPerformersByProject.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
+    // Convert to array and sort by total productivity (overall performance)
+    const allEmployees = Object.values(employeeGroups);
+    allEmployees.sort((a, b) => {
+        // Primary sort: total productivity
+        if (b.totalProductivity !== a.totalProductivity) {
+            return b.totalProductivity - a.totalProductivity;
+        }
+        // Secondary sort: stack ranking points
+        if (b.stackRankingPoints !== a.stackRankingPoints) {
+            return b.stackRankingPoints - a.stackRankingPoints;
+        }
+        // Tertiary sort: utilisation
+        return b.utilisation - a.utilisation;
+    });
     
-    // Show top 3 performers (one from each project)
-    const topPerformers = topPerformersByProject.slice(0, 3);
+    // Show top 3 performers (overall calculation)
+    const topPerformers = allEmployees.slice(0, 3);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -2353,8 +2391,12 @@ function createUserCards(metrics) {
                     <span class="info-value">#${index + 1}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Target:</span>
-                    <span class="info-value">${user.target.toLocaleString()}</span>
+                    <span class="info-label">Utilisation:</span>
+                    <span class="info-value">${user.utilisation.toFixed(1)}%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Team Performance:</span>
+                    <span class="info-value">${user.teamPerformance.toFixed(1)}%</span>
                 </div>
             </div>
         `;
