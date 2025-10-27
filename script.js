@@ -2427,23 +2427,31 @@ function createUserCards(metrics) {
         }
     });
     
-    // Convert to array and sort by total productivity (overall performance)
-    const allEmployees = Object.values(employeeGroups);
-    allEmployees.sort((a, b) => {
-        // Primary sort: total productivity
-        if (b.totalProductivity !== a.totalProductivity) {
-            return b.totalProductivity - a.totalProductivity;
+    // Group by project and find top performer from each project
+    const projectGroups = {};
+    Object.values(employeeGroups).forEach(employee => {
+        const projectKey = (employee.clientName || '').toLowerCase();
+        if (!projectGroups[projectKey]) {
+            projectGroups[projectKey] = [];
         }
-        // Secondary sort: stack ranking points
-        if (b.stackRankingPoints !== a.stackRankingPoints) {
-            return b.stackRankingPoints - a.stackRankingPoints;
-        }
-        // Tertiary sort: utilisation
-        return b.utilisation - a.utilisation;
+        projectGroups[projectKey].push(employee);
     });
     
-    // Show top 3 performers (overall calculation)
-    const topPerformers = allEmployees.slice(0, 3);
+    // Get top performer from each project (highest total productivity)
+    const topPerformersByProject = [];
+    Object.values(projectGroups).forEach(projectEmployees => {
+        // Sort by total productivity descending to get the best performer
+        projectEmployees.sort((a, b) => b.totalProductivity - a.totalProductivity);
+        if (projectEmployees.length > 0) {
+            topPerformersByProject.push(projectEmployees[0]);
+        }
+    });
+    
+    // Sort all top performers by total productivity descending
+    topPerformersByProject.sort((a, b) => b.totalProductivity - a.totalProductivity);
+    
+    // Show top 3 performers (one from each project) - TL Portal
+    const topPerformers = topPerformersByProject.slice(0, 3);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
