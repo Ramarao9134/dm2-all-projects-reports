@@ -658,7 +658,7 @@ function createManagerProjectChart(dataToProcess = null) {
       plugins: {
         title: { 
           display: true, 
-          text: `All Projects Performance Overview${dataToProcess ? ' (Filtered)' : ' (All Data')}`, 
+          text: `All Projects Performance Overview${dataToProcess ? ' (Filtered)' : ' (All Data)'}`, 
           font: { size: 16, weight: 'bold' } 
         },
         legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
