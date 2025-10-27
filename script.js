@@ -489,9 +489,12 @@ function loadManagerData() {
     let filteredData = [...productionData];
     const projectFilter = document.getElementById('managerProjectFilter');
     if (projectFilter && projectFilter.value) {
-        filteredData = productionData.filter(d => d.clientName === projectFilter.value);
+        filteredData = filteredData.filter(d => d.clientName === projectFilter.value);
         console.log('Manager filtered by project:', projectFilter.value, 'Records:', filteredData.length);
     }
+    
+    // Apply date filter if selected (for Manager portal)
+    filteredData = applyManagerDateFilter(filteredData);
     
     // Create charts with filtered data
     createManagerProjectChart(filteredData);
@@ -1329,7 +1332,7 @@ function updateDateInputs() {
             dateInputs.innerHTML = `
                 <div class="form-group">
                     <label for="selectedMonth">Month:</label>
-                    <input type="month" id="selectedMonth" value="">
+                    <input type="month" id="selectedMonth" value="" onchange="loadProductionData()">
                 </div>
             `;
             break;
@@ -1337,11 +1340,11 @@ function updateDateInputs() {
             dateInputs.innerHTML = `
                 <div class="form-group">
                     <label for="startDate">Start Date:</label>
-                    <input type="date" id="startDate" value="">
+                    <input type="date" id="startDate" value="" onchange="loadProductionData()">
                 </div>
                 <div class="form-group">
                     <label for="endDate">End Date:</label>
-                    <input type="date" id="endDate" value="">
+                    <input type="date" id="endDate" value="" onchange="loadProductionData()">
                 </div>
             `;
             break;
@@ -1349,7 +1352,7 @@ function updateDateInputs() {
             dateInputs.innerHTML = `
                 <div class="form-group">
                     <label for="selectedYear">Year:</label>
-                    <input type="number" id="selectedYear" value="" min="2020" max="2030" placeholder="Enter year">
+                    <input type="number" id="selectedYear" value="" min="2020" max="2030" placeholder="Enter year" onchange="loadProductionData()">
                 </div>
             `;
             break;
@@ -1357,6 +1360,123 @@ function updateDateInputs() {
             dateInputs.innerHTML = '<p style="color: #666; font-style: italic;">Please select a period type above</p>';
             break;
     }
+}
+
+function applyDateFilter(data) {
+    const dateFilter = document.getElementById('dateFilter');
+    if (!dateFilter || !dateFilter.value) {
+        return data; // No date filter selected, return all data
+    }
+    
+    let filteredData = [...data];
+    
+    switch(dateFilter.value) {
+        case 'month':
+            const selectedMonth = document.getElementById('selectedMonth');
+            if (selectedMonth && selectedMonth.value) {
+                const [year, month] = selectedMonth.value.split('-');
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate.getFullYear() == year && recordDate.getMonth() == (month - 1);
+                });
+                console.log('Filtered by month:', selectedMonth.value, 'Records:', filteredData.length);
+            }
+            break;
+            
+        case 'date':
+            const startDate = document.getElementById('startDate');
+            const endDate = document.getElementById('endDate');
+            if (startDate && startDate.value && endDate && endDate.value) {
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate >= start && recordDate <= end;
+                });
+                console.log('Filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
+            }
+            break;
+            
+        case 'year':
+            const selectedYear = document.getElementById('selectedYear');
+            if (selectedYear && selectedYear.value) {
+                const year = parseInt(selectedYear.value);
+                filteredData = data.filter(d => {
+                    if (!d.date) return false;
+                    const recordDate = new Date(d.date);
+                    return recordDate.getFullYear() === year;
+                });
+                console.log('Filtered by year:', year, 'Records:', filteredData.length);
+            }
+            break;
+    }
+    
+    return filteredData;
+}
+
+function applyManagerDateFilter(data) {
+    const dateFilter = document.getElementById('managerDateFilter');
+    if (!dateFilter || !dateFilter.value) {
+        return data; // No date filter selected, return all data
+    }
+    
+    let filteredData = [...data];
+    
+    switch(dateFilter.value) {
+        case 'week':
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            filteredData = data.filter(d => {
+                if (!d.date) return false;
+                const recordDate = new Date(d.date);
+                return recordDate >= weekAgo;
+            });
+            console.log('Manager filtered by week:', 'Records:', filteredData.length);
+            break;
+            
+        case 'month':
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            filteredData = data.filter(d => {
+                if (!d.date) return false;
+                const recordDate = new Date(d.date);
+                return recordDate >= monthAgo;
+            });
+            console.log('Manager filtered by month:', 'Records:', filteredData.length);
+            break;
+            
+        case 'quarter':
+            const quarterAgo = new Date();
+            quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+            filteredData = data.filter(d => {
+                if (!d.date) return false;
+                const recordDate = new Date(d.date);
+                return recordDate >= quarterAgo;
+            });
+            console.log('Manager filtered by quarter:', 'Records:', filteredData.length);
+            break;
+            
+        case 'year':
+            const yearAgo = new Date();
+            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+            filteredData = data.filter(d => {
+                if (!d.date) return false;
+                const recordDate = new Date(d.date);
+                return recordDate >= yearAgo;
+            });
+            console.log('Manager filtered by year:', 'Records:', filteredData.length);
+            break;
+            
+        case 'custom':
+            // For custom range, we would need to add custom date inputs to Manager portal
+            // For now, return all data
+            console.log('Manager custom date range - returning all data');
+            break;
+    }
+    
+    return filteredData;
 }
 
 function loadProductionData() {
@@ -1387,9 +1507,12 @@ function loadProductionData() {
     let filteredData = [...productionData];
     const projectFilter = document.getElementById('projectFilter');
     if (projectFilter && projectFilter.value) {
-        filteredData = productionData.filter(d => d.clientName === projectFilter.value);
+        filteredData = filteredData.filter(d => d.clientName === projectFilter.value);
         console.log('Filtered by project:', projectFilter.value, 'Records:', filteredData.length);
     }
+    
+    // Apply date filter if selected
+    filteredData = applyDateFilter(filteredData);
     
     // Calculate metrics with the filtered data
     const metrics = calculateMetrics(filteredData);
