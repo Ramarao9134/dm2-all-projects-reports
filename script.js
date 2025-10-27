@@ -418,6 +418,14 @@ function toggleUserStatus(email) {
 function loadManagerPage() {
     if (currentUser && currentUser.role === 'manager') {
         document.getElementById('managerUserEmail').textContent = currentUser.email;
+        
+        // Load production data first
+        const savedData = localStorage.getItem('dm2_production_data');
+        if (savedData) {
+            productionData = JSON.parse(savedData);
+        }
+        
+        // Load filters and data
         loadManagerFilters();
         loadManagerData();
         loadManagerFeedbackMessages();
@@ -425,9 +433,11 @@ function loadManagerPage() {
 }
 
 function loadManagerFilters() {
-    // Load projects
+    // Load projects - use clientName instead of project
     const projectFilter = document.getElementById('managerProjectFilter');
-    const projects = [...new Set(productionData.map(d => d.project))];
+    if (!projectFilter) return;
+    
+    const projects = [...new Set(productionData.map(d => d.clientName).filter(Boolean))];
     projectFilter.innerHTML = '<option value="">All Projects</option>';
     projects.forEach(project => {
         const option = document.createElement('option');
@@ -438,14 +448,18 @@ function loadManagerFilters() {
     
     // Load TLs (for feedback)
     const feedbackTL = document.getElementById('feedbackTL');
-    const tls = users.filter(u => u.role === 'tl' && u.status === 'active');
-    feedbackTL.innerHTML = '<option value="">Select TL/Coordinator</option>';
-    tls.forEach(tl => {
-        const option = document.createElement('option');
-        option.value = tl.email;
-        option.textContent = tl.email;
-        feedbackTL.appendChild(option);
-    });
+    if (feedbackTL) {
+        const tls = users.filter(u => u.role === 'tl' && u.status === 'active');
+        feedbackTL.innerHTML = '<option value="">Select TL/Coordinator</option>';
+        tls.forEach(tl => {
+            const option = document.createElement('option');
+            option.value = tl.email;
+            option.textContent = tl.email;
+            feedbackTL.appendChild(option);
+        });
+    }
+    
+    console.log('Loaded Manager project filters:', projects.length, 'projects');
 }
 
 function loadManagerData() {
