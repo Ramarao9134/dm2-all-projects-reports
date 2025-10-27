@@ -210,13 +210,31 @@ function checkExistingSession() {
 
 function setupEventListeners() {
     // Login form
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+        console.log('Login form event listener attached');
+    } else {
+        console.error('Login form element not found');
+    }
     
     // Admin form
-    document.getElementById('createUserForm').addEventListener('submit', handleCreateUser);
+    const createUserForm = document.getElementById('createUserForm');
+    if (createUserForm) {
+        createUserForm.addEventListener('submit', handleCreateUser);
+        console.log('Create user form event listener attached');
+    } else {
+        console.error('Create user form element not found');
+    }
     
     // Manager feedback form
-    document.getElementById('managerFeedbackForm').addEventListener('submit', handleManagerFeedback);
+    const managerFeedbackForm = document.getElementById('managerFeedbackForm');
+    if (managerFeedbackForm) {
+        managerFeedbackForm.addEventListener('submit', handleManagerFeedback);
+        console.log('Manager feedback form event listener attached');
+    } else {
+        console.error('Manager feedback form element not found');
+    }
     
     // Excel upload - wait for DOM to be ready
     setTimeout(() => {
@@ -257,10 +275,13 @@ function showPage(pageId) {
 // Login Functionality with enhanced error handling
 function handleLogin(e) {
     e.preventDefault();
+    console.log('Login form submitted');
     
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
+    
+    console.log('Login attempt:', email, password);
     
     // Clear previous errors
     errorDiv.classList.remove('show');
@@ -273,11 +294,15 @@ function handleLogin(e) {
         return;
     }
     
+    console.log('Available users:', users);
+    
     // Find user with case-insensitive email comparison
     const user = users.find(u => 
         u.email.toLowerCase() === email.toLowerCase() && 
         u.password === password
     );
+    
+    console.log('Found user:', user);
     
     if (user && user.status === 'active') {
         currentUser = user;
