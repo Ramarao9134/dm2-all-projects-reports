@@ -485,6 +485,12 @@ function loadManagerData() {
         console.log('Manager using sample data:', productionData.length, 'records');
     }
     
+    // Debug: Log sample data structure
+    if (productionData.length > 0) {
+        console.log('Manager sample data record:', productionData[0]);
+        console.log('Manager date field sample:', productionData[0].date);
+    }
+    
     // Apply project filter if selected
     let filteredData = [...productionData];
     const projectFilter = document.getElementById('managerProjectFilter');
@@ -495,6 +501,7 @@ function loadManagerData() {
     
     // Apply date filter if selected (for Manager portal)
     filteredData = applyManagerDateFilter(filteredData);
+    console.log('Manager after date filtering:', filteredData.length, 'records');
     
     // Create charts with filtered data
     createManagerProjectChart(filteredData);
@@ -1367,6 +1374,39 @@ function updateDateInputs() {
     }
 }
 
+// Helper function to parse dates robustly
+function parseDate(dateString) {
+    if (!dateString) return null;
+    
+    // Handle different date formats
+    let date;
+    
+    // Try parsing as-is first
+    date = new Date(dateString);
+    if (!isNaN(date.getTime())) return date;
+    
+    // Try parsing M/D/YYYY format (like "4/21/2025")
+    if (dateString.includes('/')) {
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            const month = parseInt(parts[0]) - 1; // JavaScript months are 0-based
+            const day = parseInt(parts[1]);
+            const year = parseInt(parts[2]);
+            date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) return date;
+        }
+    }
+    
+    // Try parsing YYYY-MM-DD format
+    if (dateString.includes('-')) {
+        date = new Date(dateString);
+        if (!isNaN(date.getTime())) return date;
+    }
+    
+    console.warn('Could not parse date:', dateString);
+    return null;
+}
+
 function applyDateFilter(data) {
     const dateFilter = document.getElementById('dateFilter');
     if (!dateFilter || !dateFilter.value) {
@@ -1380,12 +1420,16 @@ function applyDateFilter(data) {
             const selectedMonth = document.getElementById('selectedMonth');
             if (selectedMonth && selectedMonth.value) {
                 const [year, month] = selectedMonth.value.split('-');
+                const targetYear = parseInt(year);
+                const targetMonth = parseInt(month) - 1; // JavaScript months are 0-based
+                
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
-                    return recordDate.getFullYear() == year && recordDate.getMonth() == (month - 1);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
+                    return recordDate.getFullYear() === targetYear && recordDate.getMonth() === targetMonth;
                 });
-                console.log('Filtered by month:', selectedMonth.value, 'Records:', filteredData.length);
+                console.log('TL Filtered by month:', selectedMonth.value, 'Records:', filteredData.length, 'from', data.length);
             }
             break;
             
@@ -1395,12 +1439,15 @@ function applyDateFilter(data) {
             if (startDate && startDate.value && endDate && endDate.value) {
                 const start = new Date(startDate.value);
                 const end = new Date(endDate.value);
+                end.setHours(23, 59, 59, 999); // Include the entire end date
+                
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
                     return recordDate >= start && recordDate <= end;
                 });
-                console.log('Filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
+                console.log('TL Filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
             }
             break;
             
@@ -1410,10 +1457,11 @@ function applyDateFilter(data) {
                 const year = parseInt(selectedYear.value);
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
                     return recordDate.getFullYear() === year;
                 });
-                console.log('Filtered by year:', year, 'Records:', filteredData.length);
+                console.log('TL Filtered by year:', year, 'Records:', filteredData.length);
             }
             break;
     }
@@ -1475,12 +1523,16 @@ function applyManagerDateFilter(data) {
             const selectedMonth = document.getElementById('managerSelectedMonth');
             if (selectedMonth && selectedMonth.value) {
                 const [year, month] = selectedMonth.value.split('-');
+                const targetYear = parseInt(year);
+                const targetMonth = parseInt(month) - 1; // JavaScript months are 0-based
+                
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
-                    return recordDate.getFullYear() == year && recordDate.getMonth() == (month - 1);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
+                    return recordDate.getFullYear() === targetYear && recordDate.getMonth() === targetMonth;
                 });
-                console.log('Manager filtered by month:', selectedMonth.value, 'Records:', filteredData.length);
+                console.log('Manager Filtered by month:', selectedMonth.value, 'Records:', filteredData.length, 'from', data.length);
             }
             break;
             
@@ -1490,12 +1542,15 @@ function applyManagerDateFilter(data) {
             if (startDate && startDate.value && endDate && endDate.value) {
                 const start = new Date(startDate.value);
                 const end = new Date(endDate.value);
+                end.setHours(23, 59, 59, 999); // Include the entire end date
+                
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
                     return recordDate >= start && recordDate <= end;
                 });
-                console.log('Manager filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
+                console.log('Manager Filtered by date range:', startDate.value, 'to', endDate.value, 'Records:', filteredData.length);
             }
             break;
             
@@ -1505,10 +1560,11 @@ function applyManagerDateFilter(data) {
                 const year = parseInt(selectedYear.value);
                 filteredData = data.filter(d => {
                     if (!d.date) return false;
-                    const recordDate = new Date(d.date);
+                    const recordDate = parseDate(d.date);
+                    if (!recordDate) return false;
                     return recordDate.getFullYear() === year;
                 });
-                console.log('Manager filtered by year:', year, 'Records:', filteredData.length);
+                console.log('Manager Filtered by year:', year, 'Records:', filteredData.length);
             }
             break;
     }
@@ -1540,6 +1596,12 @@ function loadProductionData() {
         console.log('Using sample data:', productionData.length, 'records');
     }
     
+    // Debug: Log sample data structure
+    if (productionData.length > 0) {
+        console.log('Sample data record:', productionData[0]);
+        console.log('Date field sample:', productionData[0].date);
+    }
+    
     // Apply project filter if selected
     let filteredData = [...productionData];
     const projectFilter = document.getElementById('projectFilter');
@@ -1550,6 +1612,7 @@ function loadProductionData() {
     
     // Apply date filter if selected
     filteredData = applyDateFilter(filteredData);
+    console.log('After date filtering:', filteredData.length, 'records');
     
     // Calculate metrics with the filtered data
     const metrics = calculateMetrics(filteredData);
