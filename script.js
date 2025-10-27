@@ -489,6 +489,12 @@ function loadManagerData() {
     if (productionData.length > 0) {
         console.log('Manager sample data record:', productionData[0]);
         console.log('Manager date field sample:', productionData[0].date);
+        console.log('Manager date field type:', typeof productionData[0].date);
+        
+        // Check a few more records to see the pattern
+        for (let i = 0; i < Math.min(5, productionData.length); i++) {
+            console.log(`Manager record ${i} date:`, productionData[i].date, 'type:', typeof productionData[i].date);
+        }
     }
     
     // Apply project filter if selected
@@ -1381,12 +1387,34 @@ function parseDate(dateString) {
     // Handle different date formats
     let date;
     
+    // Handle Date object format like "Date(2025,5,16)"
+    if (typeof dateString === 'string' && dateString.startsWith('Date(')) {
+        try {
+            // Extract the date parts from "Date(2025,5,16)" format
+            const match = dateString.match(/Date\((\d+),(\d+),(\d+)\)/);
+            if (match) {
+                const year = parseInt(match[1]);
+                const month = parseInt(match[2]); // Already 0-based in this format
+                const day = parseInt(match[3]);
+                date = new Date(year, month, day);
+                if (!isNaN(date.getTime())) return date;
+            }
+        } catch (e) {
+            console.warn('Error parsing Date() format:', dateString, e);
+        }
+    }
+    
+    // Handle Date objects directly
+    if (dateString instanceof Date) {
+        return dateString;
+    }
+    
     // Try parsing as-is first
     date = new Date(dateString);
     if (!isNaN(date.getTime())) return date;
     
     // Try parsing M/D/YYYY format (like "4/21/2025")
-    if (dateString.includes('/')) {
+    if (typeof dateString === 'string' && dateString.includes('/')) {
         const parts = dateString.split('/');
         if (parts.length === 3) {
             const month = parseInt(parts[0]) - 1; // JavaScript months are 0-based
@@ -1398,7 +1426,7 @@ function parseDate(dateString) {
     }
     
     // Try parsing YYYY-MM-DD format
-    if (dateString.includes('-')) {
+    if (typeof dateString === 'string' && dateString.includes('-')) {
         date = new Date(dateString);
         if (!isNaN(date.getTime())) return date;
     }
@@ -1600,6 +1628,12 @@ function loadProductionData() {
     if (productionData.length > 0) {
         console.log('Sample data record:', productionData[0]);
         console.log('Date field sample:', productionData[0].date);
+        console.log('Date field type:', typeof productionData[0].date);
+        
+        // Check a few more records to see the pattern
+        for (let i = 0; i < Math.min(5, productionData.length); i++) {
+            console.log(`Record ${i} date:`, productionData[i].date, 'type:', typeof productionData[i].date);
+        }
     }
     
     // Apply project filter if selected
