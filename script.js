@@ -556,38 +556,10 @@ function createManagerProjectChart(dataToProcess = null) {
     }
   }
 
-  // Use provided data or fallback to global productionData
-  const data = dataToProcess || productionData;
-
-  // Get date range filter
-  const dateRange = document.getElementById('managerDateFilter')?.value || 'month';
+  // Use provided data (already filtered by date and project)
+  const filteredData = dataToProcess || productionData;
   
-  // Filter data based on date range
-  let filteredData = [...data];
-  if (dateRange !== 'custom') {
-    const now = new Date();
-    const filterDate = new Date();
-    
-    switch (dateRange) {
-      case 'week':
-        filterDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        filterDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        filterDate.setMonth(now.getMonth() - 3);
-        break;
-      case 'year':
-        filterDate.setFullYear(now.getFullYear() - 1);
-        break;
-    }
-    
-    filteredData = data.filter(user => {
-      const userDate = new Date(user.date);
-      return userDate >= filterDate;
-    });
-  }
+  console.log('Manager project chart - using filtered data:', filteredData.length, 'records');
 
   // Build project map with normalized keys (project only, no process)
   const projectMap = new Map();
@@ -659,7 +631,11 @@ function createManagerProjectChart(dataToProcess = null) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: `All Projects Performance Overview (${dateRange === 'month' ? 'This Month' : dateRange === 'quarter' ? 'This Quarter' : dateRange === 'year' ? 'This Year' : 'Custom Range'})`, font: { size: 16, weight: 'bold' } },
+        title: { 
+          display: true, 
+          text: `All Projects Performance Overview${dataToProcess ? ' (Filtered)' : ' (All Data')}`, 
+          font: { size: 16, weight: 'bold' } 
+        },
         legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
         tooltip: {
           callbacks: {
@@ -823,23 +799,31 @@ function createManagerIDCards(dataToProcess = null) {
         }
     });
     
-    // Convert to array and sort by total productivity (overall performance)
-    const allEmployees = Object.values(employeeGroups);
-    allEmployees.sort((a, b) => {
-        // Primary sort: total productivity
-        if (b.totalProductivity !== a.totalProductivity) {
-            return b.totalProductivity - a.totalProductivity;
+    // Group by project and find top performer from each project
+    const projectGroups = {};
+    Object.values(employeeGroups).forEach(employee => {
+        const projectKey = (employee.clientName || '').toLowerCase();
+        if (!projectGroups[projectKey]) {
+            projectGroups[projectKey] = [];
         }
-        // Secondary sort: stack ranking points
-        if (b.stackRankingPoints !== a.stackRankingPoints) {
-            return b.stackRankingPoints - a.stackRankingPoints;
-        }
-        // Tertiary sort: utilisation
-        return b.utilisation - a.utilisation;
+        projectGroups[projectKey].push(employee);
     });
     
-    // Show top 6 performers (overall calculation)
-    const topPerformers = allEmployees.slice(0, 6);
+    // Get top performer from each project (highest total productivity)
+    const topPerformersByProject = [];
+    Object.values(projectGroups).forEach(projectEmployees => {
+        // Sort by total productivity descending to get the best performer
+        projectEmployees.sort((a, b) => b.totalProductivity - a.totalProductivity);
+        if (projectEmployees.length > 0) {
+            topPerformersByProject.push(projectEmployees[0]);
+        }
+    });
+    
+    // Sort all top performers by total productivity descending
+    topPerformersByProject.sort((a, b) => b.totalProductivity - a.totalProductivity);
+    
+    // Show top 6 performers (one from each project)
+    const topPerformers = topPerformersByProject.slice(0, 6);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
