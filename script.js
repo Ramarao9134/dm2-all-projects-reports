@@ -113,7 +113,63 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Initialization failed:', error);
         showInitializationError(error);
     }
+    
+    // Set default Google Sheets link for cross-browser compatibility
+    setDefaultGoogleSheetsLink();
+    
+    // Auto-load data if user is already logged in
+    setTimeout(() => {
+        if (currentUser) {
+            console.log('Auto-loading data for logged in user:', currentUser.role);
+            switch(currentUser.role) {
+                case 'tl':
+                    loadProductionData();
+                    break;
+                case 'manager':
+                    loadManagerData();
+                    break;
+            }
+        }
+    }, 1000);
 });
+
+// Set default Google Sheets link that works across all browsers
+function setDefaultGoogleSheetsLink() {
+    const defaultSheetLink = 'https://docs.google.com/spreadsheets/d/1SUYakZKT_m4sw2xkFbuRnqX9r8_3qP-v/edit?usp=sharing&ouid=110973781089127610610&rtpof=true&sd=true';
+    
+    // Check if a Google Sheets link is already saved
+    const savedLink = localStorage.getItem('dm2_google_sheets_link');
+    if (!savedLink) {
+        // Set default link if none exists
+        localStorage.setItem('dm2_google_sheets_link', defaultSheetLink);
+        console.log('Set default Google Sheets link for cross-browser compatibility');
+    }
+    
+    // Update the UI to show the saved link
+    const sheetLinkInput = document.getElementById('sheetLink');
+    if (sheetLinkInput) {
+        sheetLinkInput.value = savedLink || defaultSheetLink;
+    }
+    
+    // Update the saved link display
+    updateSavedLinkDisplay();
+}
+
+// Update the saved link display in the UI
+function updateSavedLinkDisplay() {
+    const savedLink = localStorage.getItem('dm2_google_sheets_link');
+    const savedLinkDiv = document.getElementById('savedLink');
+    
+    if (savedLinkDiv) {
+        if (savedLink) {
+            savedLinkDiv.innerHTML = `Saved: <a href="${savedLink}" target="_blank" style="color: #007bff; text-decoration: underline;">${savedLink}</a>`;
+            savedLinkDiv.style.display = 'block';
+        } else {
+            savedLinkDiv.innerHTML = 'No sheet link saved yet.';
+            savedLinkDiv.style.display = 'block';
+        }
+    }
+}
 
 function checkRequiredLibraries() {
     const missingLibraries = [];
@@ -1136,15 +1192,20 @@ function createSampleFeedback() {
 }
 
 function saveSheetUrl() {
-    const input = document.getElementById('googleSheetUrl');
+    const input = document.getElementById('googleSheetUrl') || document.getElementById('sheetLink');
     const url = (input && input.value || '').trim();
     if (!url) {
         alert('Please paste a valid Google Sheet link.');
         return;
     }
+    
+    // Save to both storage keys for cross-browser compatibility
     localStorage.setItem('dm2_sheet_url', url);
-    const hint = document.getElementById('savedSheetUrlHint');
-    if (hint) hint.textContent = `Saved: ${url}`;
+    localStorage.setItem('dm2_google_sheets_link', url);
+    
+    // Update the saved link display
+    updateSavedLinkDisplay();
+    
     alert('✅ Google Sheet link saved. Click Connect Google Sheets to load data.');
 }
 
@@ -1179,10 +1240,14 @@ async function debugGoogleSheetColumns() {
 }
 
 function openGoogleSheets() {
-    const userUrl = localStorage.getItem('dm2_sheet_url');
+    // Try to get URL from both possible storage keys for cross-browser compatibility
+    let userUrl = localStorage.getItem('dm2_sheet_url') || localStorage.getItem('dm2_google_sheets_link');
+    
     if (!userUrl) {
-        alert('Please paste and save a Google Sheet link first.');
-        return;
+        // Use default URL if none is saved
+        userUrl = 'https://docs.google.com/spreadsheets/d/1SUYakZKT_m4sw2xkFbuRnqX9r8_3qP-v/edit?usp=sharing&ouid=110973781089127610610&rtpof=true&sd=true';
+        localStorage.setItem('dm2_google_sheets_link', userUrl);
+        console.log('Using default Google Sheets URL for cross-browser compatibility');
     }
     
     console.log('Connecting to Google Sheets with URL:', userUrl);
@@ -1683,11 +1748,25 @@ function loadProductionData() {
         return;
     }
     
+    // Try to load from Google Sheets first (if link is saved)
+    const savedSheetLink = localStorage.getItem('dm2_google_sheets_link');
+    if (savedSheetLink && savedSheetLink.includes('docs.google.com')) {
+        console.log('Attempting to load data from Google Sheets:', savedSheetLink);
+        loadDataFromGoogleSheets(savedSheetLink);
+        return; // This will call loadProductionData again after loading
+    }
+    
     // Update the global productionData with the latest data
     const savedData = localStorage.getItem('dm2_production_data');
     if (savedData) {
-        productionData = JSON.parse(savedData);
-        console.log('Loaded data from localStorage:', productionData.length, 'records');
+        try {
+            productionData = JSON.parse(savedData);
+            console.log('Loaded data from localStorage:', productionData.length, 'records');
+        } catch (error) {
+            console.warn('Failed to parse saved data, using sample data:', error);
+            productionData = [...sampleProductionData];
+            localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
+        }
     }
     
     // Fallback if still empty
