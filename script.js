@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize with error handling
     try {
-        initializeApp();
+    initializeApp();
     } catch (error) {
         console.error('Initialization failed:', error);
         showInitializationError(error);
@@ -231,7 +231,7 @@ function initializeApp() {
     const savedUsers = localStorage.getItem('dm2_users');
     if (savedUsers) {
         try {
-            users = JSON.parse(savedUsers);
+        users = JSON.parse(savedUsers);
             console.log('Loaded users from localStorage:', users.length);
         } catch (error) {
             console.warn('Failed to parse users data, using sample data:', error);
@@ -265,7 +265,7 @@ function initializeApp() {
     const savedFeedback = localStorage.getItem('dm2_feedback');
     if (savedFeedback) {
         try {
-            feedbackMessages = JSON.parse(savedFeedback);
+        feedbackMessages = JSON.parse(savedFeedback);
             console.log('Loaded feedback messages from localStorage:', feedbackMessages.length);
         } catch (error) {
             console.warn('Failed to parse feedback data:', error);
@@ -587,14 +587,14 @@ function loadManagerFilters() {
     // Load TLs (for feedback)
     const feedbackTL = document.getElementById('feedbackTL');
     if (feedbackTL) {
-        const tls = users.filter(u => u.role === 'tl' && u.status === 'active');
-        feedbackTL.innerHTML = '<option value="">Select TL/Coordinator</option>';
-        tls.forEach(tl => {
-            const option = document.createElement('option');
-            option.value = tl.email;
-            option.textContent = tl.email;
-            feedbackTL.appendChild(option);
-        });
+    const tls = users.filter(u => u.role === 'tl' && u.status === 'active');
+    feedbackTL.innerHTML = '<option value="">Select TL/Coordinator</option>';
+    tls.forEach(tl => {
+        const option = document.createElement('option');
+        option.value = tl.email;
+        option.textContent = tl.email;
+        feedbackTL.appendChild(option);
+    });
     }
     
     console.log('Loaded Manager project filters:', projects.length, 'projects');
@@ -1748,9 +1748,9 @@ function loadProductionData() {
         return;
     }
     
-    // Try to load from Google Sheets first (if link is saved)
+    // Try to load from Google Sheets first (if link is saved and not already loaded)
     const savedSheetLink = localStorage.getItem('dm2_google_sheets_link');
-    if (savedSheetLink && savedSheetLink.includes('docs.google.com')) {
+    if (savedSheetLink && savedSheetLink.includes('docs.google.com') && (!productionData || productionData.length === 0)) {
         console.log('Attempting to load data from Google Sheets:', savedSheetLink);
         // Load data from Google Sheets using the existing function
         loadDataFromGoogleSheetsAsync(savedSheetLink);
@@ -1761,8 +1761,8 @@ function loadProductionData() {
     const savedData = localStorage.getItem('dm2_production_data');
     if (savedData) {
         try {
-            productionData = JSON.parse(savedData);
-            console.log('Loaded data from localStorage:', productionData.length, 'records');
+        productionData = JSON.parse(savedData);
+        console.log('Loaded data from localStorage:', productionData.length, 'records');
         } catch (error) {
             console.warn('Failed to parse saved data, using sample data:', error);
             productionData = [...sampleProductionData];
@@ -1963,14 +1963,14 @@ async function loadDataFromGoogleSheetsAsync(sheetUrl) {
         // Update the saved link display
         updateSavedLinkDisplay();
         
-        // Continue with normal data loading
+        // Continue with chart creation directly (avoid recursive call)
         if (currentUser) {
             switch(currentUser.role) {
                 case 'tl':
-                    loadProductionData();
+                    createChartsAndCards();
                     break;
                 case 'manager':
-                    loadManagerData();
+                    createManagerChartsAndCards();
                     break;
             }
         }
@@ -1985,18 +1985,84 @@ async function loadDataFromGoogleSheetsAsync(sheetUrl) {
         // Update the saved link display
         updateSavedLinkDisplay();
         
-        // Continue with normal data loading
+        // Continue with chart creation directly (avoid recursive call)
         if (currentUser) {
             switch(currentUser.role) {
                 case 'tl':
-                    loadProductionData();
+                    createChartsAndCards();
                     break;
                 case 'manager':
-                    loadManagerData();
+                    createManagerChartsAndCards();
                     break;
             }
         }
     }
+}
+
+// Create charts and cards for TL portal
+function createChartsAndCards() {
+    console.log('Creating charts and cards for TL portal...');
+    
+    // Apply project filter if selected
+    let filteredData = [...productionData];
+    const projectFilter = document.getElementById('projectFilter');
+    if (projectFilter && projectFilter.value) {
+        filteredData = filteredData.filter(d => d.clientName === projectFilter.value);
+        console.log('Filtered by project:', projectFilter.value, 'Records:', filteredData.length);
+    }
+    
+    // Apply date filter if selected
+    filteredData = applyDateFilter(filteredData);
+    console.log('After date filtering:', filteredData.length, 'records');
+    
+    // Calculate metrics with the filtered data
+    const metrics = calculateMetrics(filteredData);
+    console.log('Calculated metrics:', metrics.length, 'records');
+    
+    if (!metrics.length) {
+        console.warn('No metrics to display');
+        return;
+    }
+
+    // Create visualizations
+    console.log('Creating visualizations...');
+    createUtilisationChart(metrics);
+    createStackRankingChart(metrics);
+    createUserPerformanceChart(metrics);
+    
+    // Create user cards
+    createUserCards(metrics);
+    
+    // Update data status
+    showDataStatus();
+    
+    console.log('TL charts and cards creation complete!');
+}
+
+// Create charts and cards for Manager portal
+function createManagerChartsAndCards() {
+    console.log('Creating charts and cards for Manager portal...');
+    
+    // Apply project filter if selected
+    let filteredData = [...productionData];
+    const projectFilter = document.getElementById('managerProjectFilter');
+    if (projectFilter && projectFilter.value) {
+        filteredData = filteredData.filter(d => d.clientName === projectFilter.value);
+        console.log('Manager filtered by project:', projectFilter.value, 'Records:', filteredData.length);
+    }
+    
+    // Apply date filter if selected (for Manager portal)
+    filteredData = applyManagerDateFilter(filteredData);
+    console.log('Manager after date filtering:', filteredData.length, 'records');
+    
+    // Create charts with filtered data
+    createManagerProjectChart(filteredData);
+    createManagerTeamChart(filteredData);
+    
+    // Create manager ID cards with top performers
+    createManagerIDCards(filteredData);
+    
+    console.log('Manager charts and cards creation complete!');
 }
 
 // Enhanced Google Sheets data fetching with multiple fallback approaches
