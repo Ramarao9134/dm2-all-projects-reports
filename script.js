@@ -137,37 +137,54 @@ document.addEventListener('DOMContentLoaded', function() {
 function setDefaultGoogleSheetsLink() {
     const defaultSheetLink = 'https://docs.google.com/spreadsheets/d/1SUYakZKT_m4sw2xkFbuRnqX9r8_3qP-v/edit?usp=sharing&ouid=110973781089127610610&rtpof=true&sd=true';
     
-    // Check if a Google Sheets link is already saved
-    const savedLink = localStorage.getItem('dm2_google_sheets_link');
+    // Check if a Google Sheets link is already saved (check both possible keys)
+    let savedLink = localStorage.getItem('dm2_google_sheets_link') || localStorage.getItem('dm2_sheet_url');
+    
     if (!savedLink) {
-        // Set default link if none exists
+        // Set default link if none exists (save to both keys for compatibility)
         localStorage.setItem('dm2_google_sheets_link', defaultSheetLink);
+        localStorage.setItem('dm2_sheet_url', defaultSheetLink);
+        savedLink = defaultSheetLink;
         console.log('Set default Google Sheets link for cross-browser compatibility');
     }
     
-    // Update the UI to show the saved link
-    const sheetLinkInput = document.getElementById('sheetLink');
+    // Update the UI to show the saved link (try multiple input field IDs)
+    const sheetLinkInput = document.getElementById('sheetLink') || document.getElementById('googleSheetUrl');
     if (sheetLinkInput) {
-        sheetLinkInput.value = savedLink || defaultSheetLink;
+        sheetLinkInput.value = savedLink;
+        console.log('Updated sheet link input field with:', savedLink);
     }
     
     // Update the saved link display
     updateSavedLinkDisplay();
+    
+    // Also try to load data immediately if we have a valid link
+    if (savedLink && savedLink.includes('docs.google.com')) {
+        console.log('Auto-loading data from saved Google Sheets link');
+        setTimeout(() => {
+            loadDataFromGoogleSheetsAsync(savedLink);
+        }, 1000);
+    }
 }
 
 // Update the saved link display in the UI
 function updateSavedLinkDisplay() {
-    const savedLink = localStorage.getItem('dm2_google_sheets_link');
-    const savedLinkDiv = document.getElementById('savedLink');
+    // Check both possible storage keys
+    const savedLink = localStorage.getItem('dm2_google_sheets_link') || localStorage.getItem('dm2_sheet_url');
+    const savedLinkDiv = document.getElementById('savedLink') || document.getElementById('savedSheetUrlHint');
     
     if (savedLinkDiv) {
         if (savedLink) {
             savedLinkDiv.innerHTML = `Saved: <a href="${savedLink}" target="_blank" style="color: #007bff; text-decoration: underline;">${savedLink}</a>`;
             savedLinkDiv.style.display = 'block';
+            console.log('Updated saved link display with:', savedLink);
         } else {
             savedLinkDiv.innerHTML = 'No sheet link saved yet.';
             savedLinkDiv.style.display = 'block';
+            console.log('No saved link found, showing default message');
         }
+    } else {
+        console.warn('Could not find saved link display element');
     }
 }
 
@@ -562,6 +579,9 @@ function loadManagerPage() {
         if (savedData) {
             productionData = JSON.parse(savedData);
         }
+        
+        // Set up Google Sheets link for this page
+        setDefaultGoogleSheetsLink();
         
         // Load filters and data
         loadManagerFilters();
@@ -1117,6 +1137,9 @@ function loadTLPage() {
         
         // Create sample feedback if none exists
         createSampleFeedback();
+        
+        // Set up Google Sheets link for this page
+        setDefaultGoogleSheetsLink();
         
         // Load project filters
         loadTLProjectFilters();
