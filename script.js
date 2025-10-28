@@ -79,7 +79,21 @@ const sampleProductionData = [
     { date: '4/21/2025', employeeId: 'RITPL5544', name: 'Pavan Kumar', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 0, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 0, actualHours: 0 },
     { date: '4/21/2025', employeeId: 'ITPL9646', name: 'Kusuma', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 0, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 0, actualHours: 0 },
     { date: '4/21/2025', employeeId: 'ITPL8128', name: 'Rajesh T', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
-    { date: '4/21/2025', employeeId: 'ITPL8326', name: 'Uday Kiran Y', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 }
+    { date: '4/21/2025', employeeId: 'ITPL8326', name: 'Uday Kiran Y', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 60, target: 60, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    
+    // Additional comprehensive data for consistency across devices
+    { date: '4/22/2025', employeeId: 'ITPL9621', name: 'Mahesh N', clientName: 'Negotiatus', processName: 'Data Processing', productivity: 150, target: 120, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'ITPL10376', name: 'Yavanika', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 180, target: 160, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'RITPL5165', name: 'Surya Narayan', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 225, target: 200, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'ITPL9146', name: 'Nagendra', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 190, target: 180, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'RITPL5298', name: 'Shyam Kumar', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 170, target: 160, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'ITPL9448', name: 'A Hemanth', clientName: 'Cali Bamboo', processName: 'Order Processing', productivity: 140, target: 120, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '4/22/2025', employeeId: 'ITPL10904', name: 'Sujatha R D', clientName: 'Hit Promo', processName: 'Hit - QC', productivity: 120, target: 100, clientErrors: 1, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    
+    // May 2025 data for month filtering
+    { date: '5/15/2025', employeeId: 'ITPL9621', name: 'Mahesh N', clientName: 'Negotiatus', processName: 'Data Processing', productivity: 200, target: 180, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '5/15/2025', employeeId: 'ITPL10376', name: 'Yavanika', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 220, target: 200, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 },
+    { date: '5/15/2025', employeeId: 'RITPL5165', name: 'Surya Narayan', clientName: 'Curexa Pharmacy', processName: 'Curexa - OE', productivity: 250, target: 220, clientErrors: 0, internalErrors: 0, hoursWorked: 8, actualHours: 8 }
 ];
 
 // Enhanced initialization with better error handling
@@ -877,6 +891,9 @@ function createManagerIDCards(dataToProcess = null) {
         projectGroups[projectKey].push(employee);
     });
     
+    console.log('Manager Project groups:', Object.keys(projectGroups));
+    console.log('Manager Project groups details:', projectGroups);
+    
     // Get top performer from each project (highest total productivity)
     const topPerformersByProject = [];
     Object.values(projectGroups).forEach(projectEmployees => {
@@ -887,11 +904,15 @@ function createManagerIDCards(dataToProcess = null) {
         }
     });
     
+    console.log('Manager Top performers by project:', topPerformersByProject.length);
+    
     // Sort all top performers by total productivity descending
     topPerformersByProject.sort((a, b) => b.totalProductivity - a.totalProductivity);
     
     // Show top 6 performers (one from each project)
     const topPerformers = topPerformersByProject.slice(0, 6);
+    
+    console.log('Manager Final top performers:', topPerformers.length);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -2505,6 +2526,9 @@ function createUserCards(metrics) {
         projectGroups[projectKey].push(employee);
     });
     
+    console.log('TL Project groups:', Object.keys(projectGroups));
+    console.log('TL Project groups details:', projectGroups);
+    
     // Get top performer from each project (highest total productivity)
     const topPerformersByProject = [];
     Object.values(projectGroups).forEach(projectEmployees => {
@@ -2515,11 +2539,15 @@ function createUserCards(metrics) {
         }
     });
     
+    console.log('TL Top performers by project:', topPerformersByProject.length);
+    
     // Sort all top performers by total productivity descending
     topPerformersByProject.sort((a, b) => b.totalProductivity - a.totalProductivity);
     
     // Show top 3 performers (one from each project) - TL Portal
     const topPerformers = topPerformersByProject.slice(0, 3);
+    
+    console.log('TL Final top performers:', topPerformers.length);
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
