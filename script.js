@@ -1752,7 +1752,8 @@ function loadProductionData() {
     const savedSheetLink = localStorage.getItem('dm2_google_sheets_link');
     if (savedSheetLink && savedSheetLink.includes('docs.google.com')) {
         console.log('Attempting to load data from Google Sheets:', savedSheetLink);
-        loadDataFromGoogleSheets(savedSheetLink);
+        // Load data from Google Sheets using the existing function
+        loadDataFromGoogleSheetsAsync(savedSheetLink);
         return; // This will call loadProductionData again after loading
     }
     
@@ -1927,6 +1928,75 @@ function calculateMetrics(dataToProcess = null) {
     });
     
     return allMetrics;
+}
+
+// Load data from Google Sheets asynchronously
+async function loadDataFromGoogleSheetsAsync(sheetUrl) {
+    try {
+        console.log('Loading data from Google Sheets:', sheetUrl);
+        
+        const { sheetId, gid } = parseSheetUrl(sheetUrl);
+        
+        if (!sheetId) {
+            throw new Error('Invalid Google Sheet URL');
+        }
+        
+        // Fetch data using the existing function
+        const { rows, cols } = await fetchGoogleSheetsDataWithFallback(sheetId, gid);
+        
+        if (rows.length === 0) {
+            throw new Error('No data found in the sheet');
+        }
+        
+        // Map to our format
+        const mapped = mapGoogleSheetRows(rows, cols);
+        console.log('Mapped data:', mapped.length, 'records');
+        
+        if (mapped.length === 0) {
+            throw new Error('Could not map any data from the sheet');
+        }
+        
+        productionData = mapped;
+        localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
+        console.log('Data loaded from Google Sheets:', productionData.length, 'records');
+        
+        // Update the saved link display
+        updateSavedLinkDisplay();
+        
+        // Continue with normal data loading
+        if (currentUser) {
+            switch(currentUser.role) {
+                case 'tl':
+                    loadProductionData();
+                    break;
+                case 'manager':
+                    loadManagerData();
+                    break;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading data from Google Sheets:', error);
+        console.log('Falling back to sample data due to Google Sheets error');
+        
+        // Fallback to sample data
+        productionData = [...sampleProductionData];
+        localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
+        
+        // Update the saved link display
+        updateSavedLinkDisplay();
+        
+        // Continue with normal data loading
+        if (currentUser) {
+            switch(currentUser.role) {
+                case 'tl':
+                    loadProductionData();
+                    break;
+                case 'manager':
+                    loadManagerData();
+                    break;
+            }
+        }
+    }
 }
 
 // Enhanced Google Sheets data fetching with multiple fallback approaches
