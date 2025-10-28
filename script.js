@@ -29,7 +29,36 @@ function safeDestroyChart(refName) {
 const sampleUsers = [
     { email: 'admin@dm2.com', password: 'admin123', role: 'admin', status: 'active' },
     { email: 'manager@dm2.com', password: 'manager123', role: 'manager', status: 'active' },
+    { email: 'praveen.kumar@invensis.net', password: 'praveen123', role: 'manager', status: 'active' },
     { email: 'tl@dm2.com', password: 'tl123', role: 'tl', status: 'active' }
+];
+
+// Sample feedback messages for demonstration
+const sampleFeedbackMessages = [
+    {
+        id: 1,
+        from: 'manager@dm2.com',
+        to: 'tl@dm2.com',
+        message: 'Great work on the project performance this month! Keep it up.',
+        timestamp: new Date().toISOString(),
+        parentId: null
+    },
+    {
+        id: 2,
+        from: 'tl@dm2.com',
+        to: 'manager@dm2.com',
+        message: 'Thank you for the feedback! The team is motivated to do even better.',
+        timestamp: new Date(Date.now() + 60000).toISOString(),
+        parentId: 1
+    },
+    {
+        id: 3,
+        from: 'praveen.kumar@invensis.net',
+        to: 'tl@dm2.com',
+        message: 'Please review the productivity metrics and provide suggestions for improvement.',
+        timestamp: new Date(Date.now() + 120000).toISOString(),
+        parentId: null
+    }
 ];
 
 // Real data based on your exact format: Date, Employee ID, Name, Client Name, Process Name, Productivity, Target, Client Errors, Internal Errors, Hours Worked, Actual Hours
@@ -126,45 +155,57 @@ function showInitializationError(error) {
 }
 
 function initializeApp() {
-    // Load users from localStorage or use sample data
+    console.log('Initializing application...');
+    
+    // Always ensure users data is available (for consistency across devices)
     const savedUsers = localStorage.getItem('dm2_users');
     if (savedUsers) {
         try {
             users = JSON.parse(savedUsers);
+            console.log('Loaded users from localStorage:', users.length);
         } catch (error) {
             console.warn('Failed to parse users data, using sample data:', error);
             users = [...sampleUsers];
             localStorage.setItem('dm2_users', JSON.stringify(users));
         }
     } else {
+        console.log('No users in localStorage, using sample data');
         users = [...sampleUsers];
         localStorage.setItem('dm2_users', JSON.stringify(users));
     }
     
-    // Load production data from localStorage, else seed with sample for first run
+    // Always ensure production data is available (for consistency across devices)
     const existing = localStorage.getItem('dm2_production_data');
     if (existing) {
         try {
             productionData = JSON.parse(existing) || [];
+            console.log('Loaded production data from localStorage:', productionData.length, 'records');
         } catch (error) {
             console.warn('Failed to parse production data, using sample data:', error);
             productionData = [...sampleProductionData];
             localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
         }
     } else {
+        console.log('No production data in localStorage, using sample data');
         productionData = [...sampleProductionData];
         localStorage.setItem('dm2_production_data', JSON.stringify(productionData));
     }
     
-    // Load feedback messages
+    // Always ensure feedback messages are available
     const savedFeedback = localStorage.getItem('dm2_feedback');
     if (savedFeedback) {
         try {
             feedbackMessages = JSON.parse(savedFeedback);
+            console.log('Loaded feedback messages from localStorage:', feedbackMessages.length);
         } catch (error) {
             console.warn('Failed to parse feedback data:', error);
-            feedbackMessages = [];
+            feedbackMessages = [...sampleFeedbackMessages];
+            localStorage.setItem('dm2_feedback', JSON.stringify(feedbackMessages));
         }
+    } else {
+        console.log('No feedback messages in localStorage, using sample data');
+        feedbackMessages = [...sampleFeedbackMessages];
+        localStorage.setItem('dm2_feedback', JSON.stringify(feedbackMessages));
     }
     
     // Set up event listeners
@@ -172,6 +213,8 @@ function initializeApp() {
     
     // Check for existing session
     checkExistingSession();
+    
+    console.log('Application initialization complete');
 }
 
 function checkExistingSession() {
