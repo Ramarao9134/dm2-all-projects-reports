@@ -112,8 +112,14 @@
                 <div class="filter-controls">
                     <div class="form-group">
                         <label for="managerProjectFilter">Project:</label>
-                        <select id="managerProjectFilter" onchange="loadManagerData()">
+                        <select id="managerProjectFilter" onchange="onManagerProjectChange()">
                             <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="managerUserFilterGroup" style="display: none;">
+                        <label for="managerUserFilter">User:</label>
+                        <select id="managerUserFilter" onchange="loadManagerData()">
+                            <option value="">All Users</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -150,6 +156,34 @@
                         <h3>Team Performance</h3>
                         <div id="managerTeamChart" class="chart-container">
                             <canvas id="managerTeamCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="manager-quality-section">
+                    <h3>Quality Metrics</h3>
+                    <div id="managerQualityChart" class="chart-container">
+                        <canvas id="managerQualityCanvas"></canvas>
+                    </div>
+                </div>
+                
+                <div class="manager-visualization-section">
+                    <div class="viz-tabs">
+                        <button class="tab-btn active" onclick="showManagerTab('utilisation', event)">Utilisation</button>
+                        <button class="tab-btn" onclick="showManagerTab('stackRanking', event)">Stack Ranking</button>
+                    </div>
+                    
+                    <div id="managerUtilisationTab" class="tab-content active">
+                        <h3>Utilisation Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="managerUtilisationChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div id="managerStackRankingTab" class="tab-content">
+                        <h3>Stack Ranking</h3>
+                        <div class="chart-container">
+                            <canvas id="managerStackRankingChart"></canvas>
                         </div>
                     </div>
                 </div>

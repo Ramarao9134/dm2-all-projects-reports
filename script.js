@@ -620,6 +620,70 @@ function loadManagerFilters() {
     console.log('Loaded Manager project filters:', projects.length, 'projects');
 }
 
+function onManagerProjectChange() {
+    const projectFilter = document.getElementById('managerProjectFilter');
+    const userFilterGroup = document.getElementById('managerUserFilterGroup');
+    const userFilter = document.getElementById('managerUserFilter');
+    
+    if (!projectFilter || !userFilterGroup || !userFilter) return;
+    
+    if (projectFilter.value) {
+        // Show user dropdown and populate with users from selected project
+        userFilterGroup.style.display = 'block';
+        
+        // Filter production data by selected project
+        const projectUsers = [...new Set(
+            productionData
+                .filter(d => d.clientName === projectFilter.value)
+                .map(d => ({
+                    employeeId: d.employeeId,
+                    name: d.name
+                }))
+                .filter(u => u.employeeId && u.name)
+        )];
+        
+        // Remove duplicates by employeeId
+        const uniqueUsers = [];
+        const seenIds = new Set();
+        projectUsers.forEach(u => {
+            if (!seenIds.has(u.employeeId)) {
+                seenIds.add(u.employeeId);
+                uniqueUsers.push(u);
+            }
+        });
+        
+        // Sort by name
+        uniqueUsers.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Store current selection
+        const currentUserValue = userFilter.value;
+        
+        userFilter.innerHTML = '<option value="">All Users</option>';
+        uniqueUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.employeeId;
+            option.textContent = `${user.name} (${user.employeeId})`;
+            userFilter.appendChild(option);
+        });
+        
+        // Restore selection if it still exists in the new list
+        if (currentUserValue && uniqueUsers.some(u => u.employeeId === currentUserValue)) {
+            userFilter.value = currentUserValue;
+        } else {
+            userFilter.value = '';
+        }
+        
+        console.log('Loaded users for project:', projectFilter.value, uniqueUsers.length, 'users');
+    } else {
+        // Hide user dropdown when no project is selected
+        userFilterGroup.style.display = 'none';
+        userFilter.value = '';
+    }
+    
+    // Reload data with new filters
+    loadManagerData();
+}
+
 function loadManagerData() {
     console.log('Loading manager data...');
     
@@ -663,6 +727,13 @@ function loadManagerData() {
         console.log('Manager filtered by project:', projectFilter.value, 'Records:', filteredData.length);
     }
     
+    // Apply user filter if selected
+    const userFilter = document.getElementById('managerUserFilter');
+    if (userFilter && userFilter.value) {
+        filteredData = filteredData.filter(d => d.employeeId === userFilter.value);
+        console.log('Manager filtered by user:', userFilter.value, 'Records:', filteredData.length);
+    }
+    
     // Apply date filter if selected (for Manager portal)
     filteredData = applyManagerDateFilter(filteredData);
     console.log('Manager after date filtering:', filteredData.length, 'records');
@@ -670,6 +741,12 @@ function loadManagerData() {
     // Create charts with filtered data
     createManagerProjectChart(filteredData);
     createManagerTeamChart(filteredData);
+    createManagerQualityChart(filteredData);
+    
+    // Calculate metrics for utilisation and stack ranking charts
+    const metrics = calculateMetrics(filteredData);
+    createManagerUtilisationChart(metrics);
+    createManagerStackRankingChart(metrics);
     
     // Create manager ID cards with top performers
     createManagerIDCards(filteredData);
@@ -830,6 +907,14 @@ function createManagerTeamChart(dataToProcess = null) {
   // Use provided data or fallback to global productionData
   const data = dataToProcess || productionData;
 
+  // Check if a specific project is selected
+  const projectFilter = document.getElementById('managerProjectFilter');
+  const isProjectSelected = projectFilter && projectFilter.value;
+  
+  // Check if a specific user is selected
+  const userFilter = document.getElementById('managerUserFilter');
+  const isUserSelected = userFilter && userFilter.value;
+
   // 1) Group rows by project key (project only, not client-process)
   const projectMap = new Map();
   (data || []).forEach(r => {
@@ -845,7 +930,7 @@ function createManagerTeamChart(dataToProcess = null) {
     projectMap.get(k).rows.push(r);
   });
 
-  // 2) Compute stats and filter to projects with >= 3 unique members
+  // 2) Compute stats
   const teamStats = Array.from(projectMap.values()).map(g => {
     const totalActual = g.rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
     const totalTarget = g.rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
@@ -859,12 +944,29 @@ function createManagerTeamChart(dataToProcess = null) {
       totalTarget, 
       performance 
     };
-  })
-  .filter(t => t.memberCount >= 3) // only >=3 members
-  .sort((a, b) => b.performance - a.performance || b.totalActual - a.totalActual || a.name.localeCompare(b.name));
+  });
 
-  if (teamStats.length === 0) {
-    container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No teams with more than 3 members available</p>';
+  // 3) Filter logic:
+  // - If a project is selected and has < 3 members, still show it (fix the bug)
+  // - If no project selected, only show projects with >= 3 members
+  // - If a user is selected, show only that user's project (if it exists)
+  let filteredTeamStats = teamStats;
+  
+  if (isUserSelected) {
+    // When user is selected, show only that user's project
+    filteredTeamStats = teamStats.filter(t => t.memberCount > 0);
+  } else if (isProjectSelected) {
+    // When project is selected, show it even if it has < 3 members
+    filteredTeamStats = teamStats;
+  } else {
+    // When no project selected, only show projects with >= 3 members
+    filteredTeamStats = teamStats.filter(t => t.memberCount >= 3);
+  }
+  
+  filteredTeamStats.sort((a, b) => b.performance - a.performance || b.totalActual - a.totalActual || a.name.localeCompare(b.name));
+
+  if (filteredTeamStats.length === 0) {
+    container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No data available</p>';
     return;
   }
 
@@ -872,11 +974,11 @@ function createManagerTeamChart(dataToProcess = null) {
   window.managerTeamChart = new Chart(ctx2d, {
     type: 'bar',
     data: {
-      labels: teamStats.map(t => `${t.name} (${t.memberCount} members)`),
+      labels: filteredTeamStats.map(t => `${t.name} (${t.memberCount} members)`),
       datasets: [{
         label: 'Team Performance %',
-        data: teamStats.map(t => t.performance),
-        backgroundColor: teamStats.map((_, i) => {
+        data: filteredTeamStats.map(t => t.performance),
+        backgroundColor: filteredTeamStats.map((_, i) => {
           const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1'];
           return colors[i % colors.length];
         }),
@@ -892,12 +994,16 @@ function createManagerTeamChart(dataToProcess = null) {
         x: { grid: { display: false } }
       },
       plugins: {
-        title: { display: true, text: 'Team Performance Rankings (≥3 members)', font: { size: 16, weight: 'bold' } },
+        title: { 
+          display: true, 
+          text: isProjectSelected ? `Team Performance - ${projectFilter.value}` : 'Team Performance Rankings (≥3 members)', 
+          font: { size: 16, weight: 'bold' } 
+        },
         legend: { display: false },
         tooltip: {
           callbacks: {
             label: (ctx) => {
-              const t = teamStats[ctx.dataIndex];
+              const t = filteredTeamStats[ctx.dataIndex];
               return [
                 `${t.name}`,
                 `Members: ${t.memberCount}`,
@@ -911,6 +1017,418 @@ function createManagerTeamChart(dataToProcess = null) {
       }
     }
   });
+}
+
+function createManagerQualityChart(dataToProcess = null) {
+    const container = document.getElementById('managerQualityChart');
+    const canvas = document.getElementById('managerQualityCanvas');
+    if (!container || !canvas) return;
+
+    if (typeof Chart === 'undefined') {
+        container.innerHTML = '<p style="color:red;padding:20px;">Chart.js not loaded.</p>';
+        return;
+    }
+
+    if (window.managerQualityChart && typeof window.managerQualityChart.destroy === 'function') {
+        try { window.managerQualityChart.destroy(); } catch (e) {}
+    }
+
+    const data = dataToProcess || productionData;
+    const projectFilter = document.getElementById('managerProjectFilter');
+    const userFilter = document.getElementById('managerUserFilter');
+    const isProjectSelected = projectFilter && projectFilter.value;
+    const isUserSelected = userFilter && userFilter.value;
+
+    // Group data by project or user depending on filter
+    let qualityData = [];
+    
+    if (isUserSelected) {
+        // Group by user
+        const userMap = new Map();
+        data.forEach(r => {
+            const key = String(r.employeeId || '').trim();
+            if (!key) return;
+            
+            if (!userMap.has(key)) {
+                userMap.set(key, {
+                    name: r.name || 'Unknown',
+                    employeeId: r.employeeId,
+                    clientErrors: 0,
+                    internalErrors: 0,
+                    totalRecords: 0
+                });
+            }
+            const user = userMap.get(key);
+            user.clientErrors += Number(r.clientErrors || 0);
+            user.internalErrors += Number(r.internalErrors || 0);
+            user.totalRecords += 1;
+        });
+        
+        qualityData = Array.from(userMap.values()).map(u => ({
+            label: `${u.name} (${u.employeeId})`,
+            clientErrors: u.clientErrors,
+            internalErrors: u.internalErrors,
+            errorPercentage: u.totalRecords > 0 ? ((u.clientErrors + u.internalErrors) / u.totalRecords * 100).toFixed(2) : 0
+        }));
+    } else if (isProjectSelected) {
+        // Group by project (for selected project)
+        const projectMap = new Map();
+        data.forEach(r => {
+            const key = (r.clientName || '').trim();
+            if (!key) return;
+            
+            if (!projectMap.has(key)) {
+                projectMap.set(key, {
+                    name: key,
+                    clientErrors: 0,
+                    internalErrors: 0,
+                    totalRecords: 0
+                });
+            }
+            const project = projectMap.get(key);
+            project.clientErrors += Number(r.clientErrors || 0);
+            project.internalErrors += Number(r.internalErrors || 0);
+            project.totalRecords += 1;
+        });
+        
+        qualityData = Array.from(projectMap.values()).map(p => ({
+            label: p.name,
+            clientErrors: p.clientErrors,
+            internalErrors: p.internalErrors,
+            errorPercentage: p.totalRecords > 0 ? ((p.clientErrors + p.internalErrors) / p.totalRecords * 100).toFixed(2) : 0
+        }));
+    } else {
+        // Group by all projects
+        const projectMap = new Map();
+        data.forEach(r => {
+            const key = (r.clientName || '').trim();
+            if (!key) return;
+            
+            if (!projectMap.has(key)) {
+                projectMap.set(key, {
+                    name: key,
+                    clientErrors: 0,
+                    internalErrors: 0,
+                    totalRecords: 0
+                });
+            }
+            const project = projectMap.get(key);
+            project.clientErrors += Number(r.clientErrors || 0);
+            project.internalErrors += Number(r.internalErrors || 0);
+            project.totalRecords += 1;
+        });
+        
+        qualityData = Array.from(projectMap.values())
+            .map(p => ({
+                label: p.name,
+                clientErrors: p.clientErrors,
+                internalErrors: p.internalErrors,
+                errorPercentage: p.totalRecords > 0 ? ((p.clientErrors + p.internalErrors) / p.totalRecords * 100).toFixed(2) : 0
+            }))
+            .sort((a, b) => parseFloat(b.errorPercentage) - parseFloat(a.errorPercentage))
+            .slice(0, 10); // Show top 10
+    }
+
+    if (qualityData.length === 0) {
+        container.innerHTML = '<p style="color:#666;padding:20px;text-align:center;">No quality data available</p>';
+        return;
+    }
+
+    // Sort by error percentage descending
+    qualityData.sort((a, b) => parseFloat(b.errorPercentage) - parseFloat(a.errorPercentage));
+
+    const ctx2d = canvas.getContext('2d');
+    window.managerQualityChart = new Chart(ctx2d, {
+        type: 'bar',
+        data: {
+            labels: qualityData.map(d => d.label),
+            datasets: [
+                {
+                    label: 'Client Errors',
+                    data: qualityData.map(d => d.clientErrors),
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Internal Errors',
+                    data: qualityData.map(d => d.internalErrors),
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Error Percentage',
+                    data: qualityData.map(d => parseFloat(d.errorPercentage)),
+                    type: 'line',
+                    yAxisID: 'y1',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Errors'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Error Percentage (%)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: isUserSelected ? 'Quality Metrics - User View' : 
+                          isProjectSelected ? `Quality Metrics - ${projectFilter.value}` : 
+                          'Quality Metrics by Project',
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const index = context.dataIndex;
+                            const data = qualityData[index];
+                            if (context.datasetIndex === 2) {
+                                return `Error Percentage: ${data.errorPercentage}%`;
+                            }
+                            return context.dataset.label + ': ' + context.parsed.y;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createManagerUtilisationChart(metrics) {
+    const ctx = document.getElementById('managerUtilisationChart');
+    if (!ctx) {
+        console.error('Manager utilisation chart canvas not found');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined') {
+        ctx.innerHTML = '<p style="color: red; padding: 20px;">Chart.js library not loaded.</p>';
+        return;
+    }
+    
+    safeDestroyChart('managerUtilisationChart');
+    
+    if (!metrics || metrics.length === 0) {
+        ctx.innerHTML = '<p style="color: #666; padding: 20px; text-align: center;">No data available for utilisation chart</p>';
+        return;
+    }
+    
+    // Remove duplicates and sort by utilisation descending
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Sort by utilisation descending (best performers first)
+    uniqueEmployees.sort((a, b) => b.utilisation - a.utilisation);
+    
+    try {
+        window.managerUtilisationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: uniqueEmployees.map(m => `${m.name} (${m.clientName})`),
+                datasets: [{
+                    label: 'Utilisation %',
+                    data: uniqueEmployees.map(m => m.utilisation),
+                    backgroundColor: uniqueEmployees.map(m => 
+                        m.utilisation >= 100 ? '#28a745' : 
+                        m.utilisation >= 80 ? '#ffc107' : '#dc3545'
+                    ),
+                    borderColor: uniqueEmployees.map(m => 
+                        m.utilisation >= 100 ? '#1e7e34' : 
+                        m.utilisation >= 80 ? '#e0a800' : '#c82333'
+                    ),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Utilisation %'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Employees (Ranked)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Employee Utilisation Analysis (Productivity/Per Hour Count/Hours Worked * 100)'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `${uniqueEmployees[ctx[0].dataIndex].name} (${uniqueEmployees[ctx[0].dataIndex].clientName})`
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error creating manager utilisation chart:', error);
+        ctx.innerHTML = '<p style="color: red; padding: 20px;">Error creating chart. Please try again.</p>';
+    }
+}
+
+function createManagerStackRankingChart(metrics) {
+    const ctx = document.getElementById('managerStackRankingChart');
+    if (!ctx) {
+        console.error('Manager stack ranking chart canvas not found');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined') {
+        ctx.innerHTML = '<p style="color: red; padding: 20px;">Chart.js library not loaded.</p>';
+        return;
+    }
+    
+    safeDestroyChart('managerStackRankingChart');
+    
+    if (!metrics || metrics.length === 0) {
+        ctx.innerHTML = '<p style="color: #666; padding: 20px; text-align: center;">No data available for stack ranking chart</p>';
+        return;
+    }
+    
+    // Remove duplicates and sort by stack ranking points descending
+    const uniqueEmployees = [];
+    const seenIds = new Set();
+    
+    metrics.forEach(employee => {
+        if (!seenIds.has(employee.employeeId)) {
+            seenIds.add(employee.employeeId);
+            uniqueEmployees.push(employee);
+        }
+    });
+    
+    // Sort by stack ranking points descending (best performers first)
+    uniqueEmployees.sort((a, b) => b.stackRankingPoints - a.stackRankingPoints);
+    
+    try {
+        window.managerStackRankingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: uniqueEmployees.map(m => `${m.name} (${m.clientName})`),
+                datasets: [{
+                    label: 'Stack Ranking Points',
+                    data: uniqueEmployees.map(m => m.stackRankingPoints),
+                    backgroundColor: uniqueEmployees.map((m, index) => {
+                        if (index === 0) return '#ffd700'; // Gold for 1st
+                        if (index === 1) return '#c0c0c0'; // Silver for 2nd
+                        if (index === 2) return '#cd7f32'; // Bronze for 3rd
+                        return '#667eea';
+                    }),
+                    borderColor: uniqueEmployees.map((m, index) => {
+                        if (index === 0) return '#ffb300'; // Gold border
+                        if (index === 1) return '#a0a0a0'; // Silver border
+                        if (index === 2) return '#b8860b'; // Bronze border
+                        return '#5a6fd8';
+                    }),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 12,
+                        title: {
+                            display: true,
+                            text: 'Stack Ranking Points'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Employees (Ranked)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Stack Ranking (Target Achievement + Errors + Working Days Points)'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `${uniqueEmployees[ctx[0].dataIndex].name} (${uniqueEmployees[ctx[0].dataIndex].clientName})`
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error creating manager stack ranking chart:', error);
+        ctx.innerHTML = '<p style="color: red; padding: 20px;">Error creating chart. Please try again.</p>';
+    }
+}
+
+function showManagerTab(tabName, ev) {
+    // Hide all manager tabs
+    document.querySelectorAll('#managerUtilisationTab, #managerStackRankingTab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.manager-visualization-section .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const tabId = 'manager' + tabName.charAt(0).toUpperCase() + tabName.slice(1) + 'Tab';
+    const tabElement = document.getElementById(tabId);
+    if (tabElement) {
+        tabElement.classList.add('active');
+    }
+    if (ev && ev.target) ev.target.classList.add('active');
 }
 
 function createManagerIDCards(dataToProcess = null) {
@@ -929,66 +1447,80 @@ function createManagerIDCards(dataToProcess = null) {
         return;
     }
     
-    // Group all records by employeeId to calculate total productivity across all projects
-    const employeeGroups = {};
+    // Check current filters
+    const projectFilter = document.getElementById('managerProjectFilter');
+    const userFilter = document.getElementById('managerUserFilter');
+    const isProjectSelected = projectFilter && projectFilter.value;
+    const isUserSelected = userFilter && userFilter.value;
+    
+    // Remove duplicates by employeeId and aggregate metrics
+    const employeeMap = new Map();
     metrics.forEach(employee => {
         const empId = employee.employeeId;
-        if (!employeeGroups[empId]) {
-            employeeGroups[empId] = {
+        if (!empId) return;
+        
+        if (!employeeMap.has(empId)) {
+            employeeMap.set(empId, {
                 employeeId: empId,
                 name: employee.name,
                 clientName: employee.clientName,
-                target: employee.target || 0,
-                clientErrors: employee.clientErrors || 0,
+                target: 0,
+                productivity: 0,
+                clientErrors: 0,
+                internalErrors: 0,
                 stackRankingPoints: employee.stackRankingPoints || 0,
-                totalProductivity: 0,
                 utilisation: employee.utilisation || 0,
-                teamPerformance: employee.teamPerformance || 0
-            };
+                teamPerformance: employee.teamPerformance || 0,
+                hoursWorked: employee.hoursWorked || 8
+            });
         }
-        // Sum productivity across all projects/tasks for this employee
-        employeeGroups[empId].totalProductivity += (employee.productivity || 0);
-        // Use the highest values for other metrics
-        if (employee.utilisation > employeeGroups[empId].utilisation) {
-            employeeGroups[empId].utilisation = employee.utilisation;
+        
+        const emp = employeeMap.get(empId);
+        // Aggregate values
+        emp.target += (employee.target || 0);
+        emp.productivity += (employee.productivity || 0);
+        emp.clientErrors += (employee.clientErrors || 0);
+        emp.internalErrors += (employee.internalErrors || 0);
+        
+        // Use the highest values for ranking metrics
+        if (employee.stackRankingPoints > emp.stackRankingPoints) {
+            emp.stackRankingPoints = employee.stackRankingPoints;
         }
-        if (employee.teamPerformance > employeeGroups[empId].teamPerformance) {
-            employeeGroups[empId].teamPerformance = employee.teamPerformance;
+        if (employee.utilisation > emp.utilisation) {
+            emp.utilisation = employee.utilisation;
         }
-    });
-    
-    // Group by project and find top performer from each project
-    const projectGroups = {};
-    Object.values(employeeGroups).forEach(employee => {
-        const projectKey = (employee.clientName || '').toLowerCase();
-        if (!projectGroups[projectKey]) {
-            projectGroups[projectKey] = [];
-        }
-        projectGroups[projectKey].push(employee);
-    });
-    
-    console.log('Manager Project groups:', Object.keys(projectGroups));
-    console.log('Manager Project groups details:', projectGroups);
-    
-    // Get top performer from each project (highest total productivity)
-    const topPerformersByProject = [];
-    Object.values(projectGroups).forEach(projectEmployees => {
-        // Sort by total productivity descending to get the best performer
-        projectEmployees.sort((a, b) => b.totalProductivity - a.totalProductivity);
-        if (projectEmployees.length > 0) {
-            topPerformersByProject.push(projectEmployees[0]);
+        if (employee.teamPerformance > emp.teamPerformance) {
+            emp.teamPerformance = employee.teamPerformance;
         }
     });
     
-    console.log('Manager Top performers by project:', topPerformersByProject.length);
+    let topPerformers = Array.from(employeeMap.values());
     
-    // Sort all top performers by total productivity descending
-    topPerformersByProject.sort((a, b) => b.totalProductivity - a.totalProductivity);
+    // If a project is selected, filter to only that project's employees
+    if (isProjectSelected) {
+        topPerformers = topPerformers.filter(e => e.clientName === projectFilter.value);
+    }
     
-    // Show top 6 performers (one from each project)
-    const topPerformers = topPerformersByProject.slice(0, 6);
+    // Sort by stack ranking points first, then by utilisation (same logic as charts)
+    topPerformers.sort((a, b) => {
+        // Primary sort: stack ranking points descending
+        if (b.stackRankingPoints !== a.stackRankingPoints) {
+            return b.stackRankingPoints - a.stackRankingPoints;
+        }
+        // Secondary sort: utilisation descending
+        return b.utilisation - a.utilisation;
+    });
+    
+    // Limit to top 6 performers (or show all if less than 6)
+    const maxCards = 6;
+    topPerformers = topPerformers.slice(0, maxCards);
     
     console.log('Manager Final top performers:', topPerformers.length);
+    
+    if (topPerformers.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No performance data available for the selected filters.</p>';
+        return;
+    }
     
     topPerformers.forEach((user, index) => {
         const card = document.createElement('div');
@@ -1006,15 +1538,19 @@ function createManagerIDCards(dataToProcess = null) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Total Productivity:</span>
-                    <span class="info-value">${user.totalProductivity.toLocaleString()}</span>
+                    <span class="info-value">${user.productivity.toLocaleString()}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Client Errors:</span>
                     <span class="info-value">${user.clientErrors}</span>
                 </div>
                 <div class="info-row">
+                    <span class="info-label">Internal Errors:</span>
+                    <span class="info-value">${user.internalErrors}</span>
+                </div>
+                <div class="info-row">
                     <span class="info-label">Stack Ranking:</span>
-                    <span class="info-value">#${index + 1}</span>
+                    <span class="info-value">#${index + 1} (${user.stackRankingPoints} pts)</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Utilisation:</span>
@@ -2066,26 +2602,9 @@ function createChartsAndCards() {
 function createManagerChartsAndCards() {
     console.log('Creating charts and cards for Manager portal...');
     
-    // Apply project filter if selected
-    let filteredData = [...productionData];
-    const projectFilter = document.getElementById('managerProjectFilter');
-    if (projectFilter && projectFilter.value) {
-        filteredData = filteredData.filter(d => d.clientName === projectFilter.value);
-        console.log('Manager filtered by project:', projectFilter.value, 'Records:', filteredData.length);
-    }
-    
-    // Apply date filter if selected (for Manager portal)
-    filteredData = applyManagerDateFilter(filteredData);
-    console.log('Manager after date filtering:', filteredData.length, 'records');
-    
-    // Create charts with filtered data
-    createManagerProjectChart(filteredData);
-    createManagerTeamChart(filteredData);
-    
-    // Create manager ID cards with top performers
-    createManagerIDCards(filteredData);
-    
-    console.log('Manager charts and cards creation complete!');
+    // This function is kept for backward compatibility
+    // The main function loadManagerData() now handles all chart creation
+    loadManagerData();
 }
 
 // Enhanced Google Sheets data fetching with multiple fallback approaches
