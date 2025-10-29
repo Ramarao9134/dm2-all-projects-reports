@@ -7,7 +7,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     min-height: 100vh;
     color: #333;
 }
@@ -265,6 +265,37 @@ tr:hover {
     margin-bottom: 40px;
 }
 
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .manager-content {
+        padding: 0 15px;
+    }
+    
+    .filters-section,
+    .manager-quality-section,
+    .manager-visualization-section,
+    .top-performers-section,
+    .feedback-section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chart-container {
+        height: 300px;
+        padding: 15px;
+    }
+    
+    .manager-quality-section .chart-container,
+    .manager-visualization-section .chart-container {
+        height: 350px;
+    }
+}
+
 .dashboard-card {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     padding: 30px;
@@ -290,11 +321,96 @@ tr:hover {
 }
 
 .chart-container {
-    height: 350px;
+    height: 400px;
     position: relative;
     background: rgba(255,255,255,0.5);
     border-radius: 15px;
-    padding: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Manager specific chart containers */
+.manager-quality-section .chart-container {
+    height: 450px;
+}
+
+.manager-visualization-section .chart-container {
+    height: 450px;
+}
+
+/* Manager Quality Section */
+.manager-quality-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    clear: both;
+}
+
+.manager-quality-section h3 {
+    color: #667eea;
+    margin-bottom: 25px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Manager Visualization Section */
+.manager-visualization-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    clear: both;
+}
+
+.manager-visualization-section .viz-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    justify-content: center;
+}
+
+.manager-visualization-section .tab-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.manager-visualization-section .tab-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.manager-visualization-section .tab-btn.active {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+.manager-visualization-section .tab-content {
+    display: none;
+}
+
+.manager-visualization-section .tab-content.active {
+    display: block;
+}
+
+.manager-visualization-section .tab-content h3 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: center;
 }
 
 .top-performers-section {
@@ -304,7 +420,7 @@ tr:hover {
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     margin-bottom: 30px;
     border: 1px solid rgba(102, 126, 234, 0.1);
-    clear: both;                 /* keep it in normal flow */
+    clear: both;
 }
 
 .top-performers-section h3 {
@@ -439,6 +555,7 @@ tr:hover {
     margin-bottom: 30px;
     border: 1px solid rgba(102, 126, 234, 0.1);
     clear: both;
+    margin-top: 40px;
 }
 
 .feedback-section h3 {
