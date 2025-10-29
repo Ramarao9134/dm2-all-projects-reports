@@ -881,6 +881,10 @@ function createManagerProjectChart(dataToProcess = null) {
         }
       });
     }
+  } else if (projectStats.length === 1) {
+    // Single project should show its actual performance percentage
+    const project = projectStats[0];
+    project.performance = Math.round(project.rawPerformance);
   }
 
   // Different color schemes for different contexts
@@ -888,7 +892,7 @@ function createManagerProjectChart(dataToProcess = null) {
   const isProjectSelected = projectFilter && projectFilter.value;
   let colors;
   if (isProjectSelected) {
-    // When specific project selected, use distinct colors
+    // When specific project selected, use distinct colors for Project Overview
     colors = ['#e53e3e', '#38a169', '#3182ce', '#d69e2e', '#805ad5', '#dd6b20', '#319795', '#e91e63'];
   } else {
     // When showing all projects, use original colors
@@ -1056,8 +1060,9 @@ function createManagerTeamChart(dataToProcess = null) {
           const isProjectSelected = projectFilter && projectFilter.value;
           
           if (isProjectSelected) {
-            const distinctColors = ['#e53e3e', '#38a169', '#3182ce', '#d69e2e', '#805ad5', '#dd6b20', '#319795', '#e91e63'];
-            return distinctColors[i % distinctColors.length];
+            // Use different colors for Team Performance when project selected
+            const teamColors = ['#f56565', '#48bb78', '#4299e1', '#ed8936', '#9f7aea', '#38b2ac', '#e53e3e', '#68d391'];
+            return teamColors[i % teamColors.length];
           } else {
             const originalColors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1'];
             return originalColors[i % originalColors.length];
