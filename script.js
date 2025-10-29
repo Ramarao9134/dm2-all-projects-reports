@@ -884,6 +884,8 @@ function createManagerProjectChart(dataToProcess = null) {
   }
 
   // Different color schemes for different contexts
+  const projectFilter = document.getElementById('managerProjectFilter');
+  const isProjectSelected = projectFilter && projectFilter.value;
   let colors;
   if (isProjectSelected) {
     // When specific project selected, use distinct colors
