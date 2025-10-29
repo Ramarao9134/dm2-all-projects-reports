@@ -832,7 +832,7 @@ function createManagerProjectChart(dataToProcess = null) {
   // Remove any existing "no data" message
   container.querySelector('.no-data-msg')?.remove();
 
-  // Calculate stats for all projects (no filtering by member count)
+  // Calculate stats for all projects with new ordering (best first)
   const projectStats = Array.from(projectMap.entries()).map(([pKey, { displayName, rows, members }]) => {
     const memberCount = members.size;
     const totalActual = rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
@@ -846,7 +846,8 @@ function createManagerProjectChart(dataToProcess = null) {
       totalTarget, 
       performance 
     };
-  });
+  })
+  .sort((a, b) => b.performance - a.performance || b.totalActual - a.totalActual || a.name.localeCompare(b.name));
 
   const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3'];
 
@@ -876,9 +877,23 @@ function createManagerProjectChart(dataToProcess = null) {
           callbacks: {
             label: (context) => {
               const p = projectStats[context.dataIndex];
+              // Determine current period label for tooltip context
+              const dateFilter = document.getElementById('managerDateFilter');
+              let periodLabel = 'Overall';
+              if (dateFilter && dateFilter.value === 'month') {
+                const m = document.getElementById('managerSelectedMonth');
+                if (m && m.value) periodLabel = m.value;
+              } else if (dateFilter && dateFilter.value === 'year') {
+                const y = document.getElementById('managerSelectedYear');
+                if (y && y.value) periodLabel = y.value;
+              } else if (dateFilter && dateFilter.value === 'date') {
+                const s = document.getElementById('managerStartDate');
+                const e = document.getElementById('managerEndDate');
+                if (s && s.value && e && e.value) periodLabel = `${s.value} → ${e.value}`;
+              }
               return [
                 `1. Project name: ${p.name} (${p.count} users)`,
-                `2. Performance percentage: ${p.performance}%`,
+                `2. Performance percentage: ${p.performance}% (${periodLabel})`,
                 `3. Actual counts: ${p.totalActual.toLocaleString()}`
               ];
             }
@@ -1506,39 +1521,54 @@ function createManagerIDCards(dataToProcess = null) {
         }
     });
     
-    let topPerformers = Array.from(employeeMap.values());
+    let topPerformers = [];
     
-    // Apply filtering based on current selections
-    if (isUserSelected) {
-        // If user is selected, show only that user
-        topPerformers = topPerformers.filter(e => e.employeeId === userFilter.value);
-    } else if (isProjectSelected) {
-        // If project is selected, show all users from that project
-        topPerformers = topPerformers.filter(e => e.clientName === projectFilter.value);
-    }
-    // If no filters, show all users
-    
-    // Sort by stack ranking points first, then by individual performance (teamPerformance)
-    topPerformers.sort((a, b) => {
-        // Primary sort: stack ranking points descending
-        if (b.stackRankingPoints !== a.stackRankingPoints) {
-            return b.stackRankingPoints - a.stackRankingPoints;
-        }
-        // Secondary sort: individual performance descending
-        return b.teamPerformance - a.teamPerformance;
-    });
-    
-    // Limit cards based on team strength
-    let maxCards = 6;
-    if (isProjectSelected && topPerformers.length > 6) {
-        maxCards = 6; // Show top 6 if team has more than 6 members
-    } else if (isProjectSelected && topPerformers.length <= 6) {
-        maxCards = topPerformers.length; // Show all if team has 6 or fewer members
+    if (!isProjectSelected && !isUserSelected) {
+        // OVERALL VIEW: pick one top performer per project, then take top 6
+        const projectToEmployees = new Map();
+        Array.from(employeeMap.values()).forEach(emp => {
+            const key = (emp.clientName || '').trim().toLowerCase();
+            if (!key) return;
+            if (!projectToEmployees.has(key)) projectToEmployees.set(key, []);
+            projectToEmployees.get(key).push(emp);
+        });
+        
+        // Sort inside each project using strict comparator
+        const comparator = (a, b) => (
+            b.stackRankingPoints - a.stackRankingPoints ||
+            b.utilisation - a.utilisation ||
+            b.teamPerformance - a.teamPerformance ||
+            b.productivity - a.productivity
+        );
+        
+        const topPerProject = [];
+        projectToEmployees.forEach(arr => {
+            arr.sort(comparator);
+            if (arr.length) topPerProject.push(arr[0]);
+        });
+        
+        // Now take global top 6 by the same comparator
+        topPerProject.sort(comparator);
+        topPerformers = topPerProject.slice(0, 6);
     } else {
-        maxCards = 6; // Show top 6 for overall view
+        // PROJECT VIEW (or user selected): show users from that project only
+        let projectUsers = Array.from(employeeMap.values());
+        if (isUserSelected) {
+            projectUsers = projectUsers.filter(e => e.employeeId === userFilter.value);
+        } else if (isProjectSelected) {
+            projectUsers = projectUsers.filter(e => e.clientName === projectFilter.value);
+        }
+        
+        projectUsers.sort((a, b) => (
+            b.stackRankingPoints - a.stackRankingPoints ||
+            b.utilisation - a.utilisation ||
+            b.teamPerformance - a.teamPerformance ||
+            b.productivity - a.productivity
+        ));
+        
+        const maxCards = projectUsers.length > 6 ? 6 : projectUsers.length;
+        topPerformers = projectUsers.slice(0, maxCards);
     }
-    
-    topPerformers = topPerformers.slice(0, maxCards);
     
     console.log('Manager Final top performers:', topPerformers.length);
     
