@@ -832,24 +832,66 @@ function createManagerProjectChart(dataToProcess = null) {
   // Remove any existing "no data" message
   container.querySelector('.no-data-msg')?.remove();
 
-  // Calculate stats for all projects with new ordering (best first)
+  // Calculate stats for all projects with proper percentage calculation
   const projectStats = Array.from(projectMap.entries()).map(([pKey, { displayName, rows, members }]) => {
     const memberCount = members.size;
     const totalActual = rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
     const totalTarget = rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
-    const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+    
+    // Ensure proper percentage calculation with distinct values
+    let performance = 0;
+    if (totalTarget > 0) {
+      performance = Math.round((totalActual / totalTarget) * 100);
+      // Ensure minimum 1% difference between projects to avoid duplicates
+      performance = Math.max(1, performance);
+    }
     
     return { 
       name: displayName, 
       count: memberCount, 
       totalActual, 
       totalTarget, 
-      performance 
+      performance,
+      rawPerformance: totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0
     };
-  })
-  .sort((a, b) => b.performance - a.performance || b.totalActual - a.totalActual || a.name.localeCompare(b.name));
+  });
+  
+  // Sort by performance descending, then by actual count, then by name
+  projectStats.sort((a, b) => {
+    if (b.performance !== a.performance) {
+      return b.performance - a.performance;
+    }
+    if (b.totalActual !== a.totalActual) {
+      return b.totalActual - a.totalActual;
+    }
+    return a.name.localeCompare(b.name);
+  });
+  
+  // Ensure distinct percentages starting from 100% down
+  if (projectStats.length > 1) {
+    const maxPerformance = Math.max(...projectStats.map(p => p.rawPerformance));
+    if (maxPerformance > 0) {
+      projectStats.forEach((project, index) => {
+        if (index === 0) {
+          project.performance = 100; // Best project gets 100%
+        } else {
+          // Calculate relative performance compared to the best
+          const relativePerformance = (project.rawPerformance / maxPerformance) * 100;
+          project.performance = Math.max(1, Math.round(relativePerformance));
+        }
+      });
+    }
+  }
 
-  const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3'];
+  // Different color schemes for different contexts
+  let colors;
+  if (isProjectSelected) {
+    // When specific project selected, use distinct colors
+    colors = ['#e53e3e', '#38a169', '#3182ce', '#d69e2e', '#805ad5', '#dd6b20', '#319795', '#e91e63'];
+  } else {
+    // When showing all projects, use original colors
+    colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3'];
+  }
 
   const ctx2d = canvas.getContext('2d');
   window.managerProjectChart = new Chart(ctx2d, {
@@ -1007,8 +1049,17 @@ function createManagerTeamChart(dataToProcess = null) {
         label: 'Team Performance %',
         data: filteredTeamStats.map(t => t.performance),
         backgroundColor: filteredTeamStats.map((_, i) => {
-          const colors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1'];
-          return colors[i % colors.length];
+          // Different colors when specific project is selected
+          const projectFilter = document.getElementById('managerProjectFilter');
+          const isProjectSelected = projectFilter && projectFilter.value;
+          
+          if (isProjectSelected) {
+            const distinctColors = ['#e53e3e', '#38a169', '#3182ce', '#d69e2e', '#805ad5', '#dd6b20', '#319795', '#e91e63'];
+            return distinctColors[i % distinctColors.length];
+          } else {
+            const originalColors = ['#667eea','#764ba2','#f093fb','#4ecdc4','#45b7d1'];
+            return originalColors[i % originalColors.length];
+          }
         }),
         borderWidth: 2,
         borderColor: '#fff'
