@@ -854,7 +854,7 @@ function createManagerProjectChart(dataToProcess = null) {
   window.managerProjectChart = new Chart(ctx2d, {
     type: 'doughnut',
     data: {
-      labels: projectStats.map(p => `${p.name} (${p.count} employees)`),
+      labels: projectStats.map(p => `${p.name} (${p.count} users)`),
       datasets: [{
         data: projectStats.map(p => p.performance),
         backgroundColor: colors.slice(0, projectStats.length),
@@ -877,10 +877,9 @@ function createManagerProjectChart(dataToProcess = null) {
             label: (context) => {
               const p = projectStats[context.dataIndex];
               return [
-                `${p.name}`,
-                `Employees: ${p.count}`,
-                `Performance: ${p.performance}%`,
-                `Actual: ${p.totalActual.toLocaleString()}`
+                `1. Project name: ${p.name} (${p.count} users)`,
+                `2. Performance percentage: ${p.performance}%`,
+                `3. Actual counts: ${p.totalActual.toLocaleString()}`
               ];
             }
           }
@@ -930,18 +929,32 @@ function createManagerTeamChart(dataToProcess = null) {
     projectMap.get(k).rows.push(r);
   });
 
-  // 2) Compute stats
+  // 2) Compute stats with new formula: (actual count percentage * 50%) + (errors percentage * 50%)
   const teamStats = Array.from(projectMap.values()).map(g => {
     const totalActual = g.rows.reduce((s, r) => s + (Number(r.productivity ?? r.actual) || 0), 0);
     const totalTarget = g.rows.reduce((s, r) => s + (Number(r.target) || 0), 0);
+    const totalClientErrors = g.rows.reduce((s, r) => s + (Number(r.clientErrors) || 0), 0);
+    const totalInternalErrors = g.rows.reduce((s, r) => s + (Number(r.internalErrors) || 0), 0);
+    const totalErrors = totalClientErrors + totalInternalErrors;
     const members = new Set(g.rows.map(r => String(r.employeeId || '').trim()).filter(Boolean));
     const memberCount = members.size;
-    const performance = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+    
+    // Calculate actual count percentage
+    const actualCountPercentage = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+    
+    // Calculate errors percentage (inverse - lower errors = higher percentage)
+    const maxPossibleErrors = totalActual * 0.1; // Assume max 10% error rate
+    const errorsPercentage = maxPossibleErrors > 0 ? Math.max(0, 100 - (totalErrors / maxPossibleErrors) * 100) : 100;
+    
+    // New formula: (actual count percentage * 50%) + (errors percentage * 50%)
+    const performance = Math.round((actualCountPercentage * 0.5) + (errorsPercentage * 0.5));
+    
     return { 
       name: g.displayName, 
       memberCount, 
       totalActual, 
       totalTarget, 
+      totalErrors,
       performance 
     };
   });
@@ -974,7 +987,7 @@ function createManagerTeamChart(dataToProcess = null) {
   window.managerTeamChart = new Chart(ctx2d, {
     type: 'bar',
     data: {
-      labels: filteredTeamStats.map(t => `${t.name} (${t.memberCount} members)`),
+      labels: filteredTeamStats.map(t => `${t.name} (${t.memberCount} users)`),
       datasets: [{
         label: 'Team Performance %',
         data: filteredTeamStats.map(t => t.performance),
@@ -1005,11 +1018,10 @@ function createManagerTeamChart(dataToProcess = null) {
             label: (ctx) => {
               const t = filteredTeamStats[ctx.dataIndex];
               return [
-                `${t.name}`,
-                `Members: ${t.memberCount}`,
-                `Performance: ${t.performance}%`,
-                `Actual: ${t.totalActual.toLocaleString()}`,
-                `Target: ${t.totalTarget.toLocaleString()}`
+                `1. Project name: ${t.name} (${t.memberCount} users)`,
+                `2. Performance percentage: ${t.performance}%`,
+                `3. Actual counts: ${t.totalActual.toLocaleString()}`,
+                `4. Target counts: ${t.totalTarget.toLocaleString()}`
               ];
             }
           }
@@ -1496,23 +1508,36 @@ function createManagerIDCards(dataToProcess = null) {
     
     let topPerformers = Array.from(employeeMap.values());
     
-    // If a project is selected, filter to only that project's employees
-    if (isProjectSelected) {
+    // Apply filtering based on current selections
+    if (isUserSelected) {
+        // If user is selected, show only that user
+        topPerformers = topPerformers.filter(e => e.employeeId === userFilter.value);
+    } else if (isProjectSelected) {
+        // If project is selected, show all users from that project
         topPerformers = topPerformers.filter(e => e.clientName === projectFilter.value);
     }
+    // If no filters, show all users
     
-    // Sort by stack ranking points first, then by utilisation (same logic as charts)
+    // Sort by stack ranking points first, then by individual performance (teamPerformance)
     topPerformers.sort((a, b) => {
         // Primary sort: stack ranking points descending
         if (b.stackRankingPoints !== a.stackRankingPoints) {
             return b.stackRankingPoints - a.stackRankingPoints;
         }
-        // Secondary sort: utilisation descending
-        return b.utilisation - a.utilisation;
+        // Secondary sort: individual performance descending
+        return b.teamPerformance - a.teamPerformance;
     });
     
-    // Limit to top 6 performers (or show all if less than 6)
-    const maxCards = 6;
+    // Limit cards based on team strength
+    let maxCards = 6;
+    if (isProjectSelected && topPerformers.length > 6) {
+        maxCards = 6; // Show top 6 if team has more than 6 members
+    } else if (isProjectSelected && topPerformers.length <= 6) {
+        maxCards = topPerformers.length; // Show all if team has 6 or fewer members
+    } else {
+        maxCards = 6; // Show top 6 for overall view
+    }
+    
     topPerformers = topPerformers.slice(0, maxCards);
     
     console.log('Manager Final top performers:', topPerformers.length);
@@ -2417,43 +2442,45 @@ function calculateMetrics(dataToProcess = null) {
             const hoursWorked = Number(user.hoursWorked) || 8;
             const actualHours = Number(user.actualHours) || 8;
             
-            // 1. Utilisation Formula: (total count / per hour count) / hours worked * 100
+            // 1. New Utilisation Formula: (Actual count / per hour count) / total hours worked * 100
             // Per hour count = target / 8 (assuming 8 hours per day)
             const perHourCount = target / 8;
-            const utilisation = (perHourCount > 0 && hoursWorked > 0) ? 
-                (productivity / perHourCount) / hoursWorked * 100 : 0;
+            const totalHoursWorked = hoursWorked || 8; // Use hoursWorked or default to 8
+            const utilisation = (perHourCount > 0 && totalHoursWorked > 0) ? 
+                (productivity / perHourCount) / totalHoursWorked * 100 : 0;
             
-            // 2. Stack Ranking Points Calculation
+            // 2. New Stack Ranking Points Calculation
             let stackRankingPoints = 0;
             
-            // Target Achievement Points (5, 4, 3, 2, 1)
+            // A. Actual count points (based on target achievement)
             if (target > 0) {
                 const achievementRatio = (productivity / target) * 100;
                 if (achievementRatio >= 100) stackRankingPoints += 5;      // 100%+ = 5 points
                 else if (achievementRatio >= 90) stackRankingPoints += 4;  // 90-99% = 4 points
                 else if (achievementRatio >= 80) stackRankingPoints += 3;  // 80-89% = 3 points
-                else if (achievementRatio >= 70) stackRankingPoints += 2;  // 70-79% = 2 points
-                else stackRankingPoints += 1;                              // 60% or below = 1 point
+                else if (achievementRatio >= 70) stackRankingPoints += 3;  // 70-79% = 3 points
+                else if (achievementRatio >= 60) stackRankingPoints += 2;  // 60-69% = 2 points
+                else stackRankingPoints += 1;                              // Below 60% = 1 point
             }
             
-            // Error Points (5, 4, 3, 2, 1)
+            // B. Error points (inverse - lower errors = higher points)
             const totalErrors = clientErrors + internalErrors;
-            if (totalErrors === 0) stackRankingPoints += 5;
-            else if (totalErrors >= 1 && totalErrors <= 3) stackRankingPoints += 4;
-            else if (totalErrors >= 4 && totalErrors <= 6) stackRankingPoints += 3;
-            else if (totalErrors >= 7 && totalErrors <= 9) stackRankingPoints += 2;
-            else if (totalErrors >= 10) stackRankingPoints += 1;
+            if (totalErrors === 0) stackRankingPoints += 5;                    // 0 errors = 5 points
+            else if (totalErrors >= 1 && totalErrors <= 3) stackRankingPoints += 4;  // 1-3 errors = 4 points
+            else if (totalErrors >= 4 && totalErrors <= 6) stackRankingPoints += 3;  // 4-6 errors = 3 points
+            else if (totalErrors >= 7 && totalErrors <= 9) stackRankingPoints += 2;  // 7-9 errors = 2 points
+            else if (totalErrors >= 10) stackRankingPoints += 1;                    // 10+ errors = 1 point
             
-            // Working Days Points (2, 1, -1, -2)
-            // Calculate missing hours: expected hours - actual hours
+            // C. Working days points (based on leaves/attendance)
             const expectedHours = 8 * 22; // 8 hours per day * 22 working days per month
             const missingHours = expectedHours - actualHours;
-            const missingDays = missingHours / 8; // Convert hours to days
+            const missingDays = Math.max(0, missingHours / 8); // Convert hours to days, minimum 0
             
             if (missingDays <= 0) stackRankingPoints += 2;        // No missing days = 2 points
             else if (missingDays <= 2) stackRankingPoints += 1;   // 1-2 missing days = 1 point
-            else if (missingDays <= 3) stackRankingPoints -= 1;   // 3 missing days = -1 point
-            else stackRankingPoints -= 2;                         // 4+ missing days = -2 points
+            else if (missingDays <= 4) stackRankingPoints += 0;   // 3-4 missing days = 0 points
+            else if (missingDays <= 6) stackRankingPoints -= 1;   // 5-6 missing days = -1 point
+            else stackRankingPoints -= 2;                         // 7+ missing days = -2 points
             
             // 3. Team Performance (based on productivity vs target)
             const teamPerformance = target > 0 ? (productivity / target) * 100 : 0;
