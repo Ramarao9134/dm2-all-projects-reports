@@ -1635,48 +1635,49 @@ function createManagerIDCards(dataToProcess = null) {
         return;
     }
     
+    // Create table structure for list view
+    const table = document.createElement('table');
+    table.className = 'performers-list-table';
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Name</th>
+                <th>Employee ID</th>
+                <th>Project</th>
+                <th>Productivity</th>
+                <th>Client Errors</th>
+                <th>Internal Errors</th>
+                <th>Stack Ranking</th>
+                <th>Utilisation</th>
+                <th>Team Performance</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    `;
+    
+    const tbody = table.querySelector('tbody');
+    
     topPerformers.forEach((user, index) => {
-        const card = document.createElement('div');
-        card.className = 'user-card';
-        card.innerHTML = `
-            <h4>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏆'} ${user.name}</h4>
-            <div class="user-info">
-                <div class="info-row">
-                    <span class="info-label">Employee ID:</span>
-                    <span class="info-value">${user.employeeId || 'N/A'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Client/Project Name:</span>
-                    <span class="info-value">${user.clientName || 'N/A'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Total Productivity:</span>
-                    <span class="info-value">${user.productivity.toLocaleString()}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Client Errors:</span>
-                    <span class="info-value">${user.clientErrors}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Internal Errors:</span>
-                    <span class="info-value">${user.internalErrors}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Stack Ranking:</span>
-                    <span class="info-value">#${index + 1} (${user.stackRankingPoints} pts)</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Utilisation:</span>
-                    <span class="info-value">${user.utilisation.toFixed(1)}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Team Performance:</span>
-                    <span class="info-value">${user.teamPerformance.toFixed(1)}%</span>
-                </div>
-            </div>
+        const row = document.createElement('tr');
+        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏆';
+        row.innerHTML = `
+            <td class="rank-cell">${rankIcon} #${index + 1}</td>
+            <td class="name-cell">${user.name || 'N/A'}</td>
+            <td>${user.employeeId || 'N/A'}</td>
+            <td>${user.clientName || 'N/A'}</td>
+            <td class="number-cell">${user.productivity.toLocaleString()}</td>
+            <td class="number-cell">${user.clientErrors}</td>
+            <td class="number-cell">${user.internalErrors}</td>
+            <td class="number-cell highlight">${user.stackRankingPoints} pts</td>
+            <td class="number-cell">${user.utilisation.toFixed(1)}%</td>
+            <td class="number-cell">${user.teamPerformance.toFixed(1)}%</td>
         `;
-        container.appendChild(card);
+        tbody.appendChild(row);
     });
+    
+    container.appendChild(table);
 }
 
 function loadManagerFeedbackMessages() {

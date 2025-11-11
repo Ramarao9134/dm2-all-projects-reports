@@ -446,6 +446,93 @@ tr:hover {
     overflow-x: auto;
 }
 
+/* Top Performers List/Table Styles */
+.performers-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.performers-list-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.performers-list-table th {
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.performers-list-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.2s ease;
+}
+
+.performers-list-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.performers-list-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.performers-list-table td {
+    padding: 15px 12px;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.performers-list-table .rank-cell {
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+    color: #667eea;
+}
+
+.performers-list-table .name-cell {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.performers-list-table .number-cell {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+.performers-list-table .number-cell.highlight {
+    color: #667eea;
+    font-weight: 700;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .performers-list-table {
+        font-size: 0.85rem;
+    }
+    
+    .performers-list-table th,
+    .performers-list-table td {
+        padding: 10px 8px;
+    }
+    
+    .manager-performers-grid {
+        overflow-x: auto;
+    }
+    
+    .performers-list-table {
+        min-width: 800px;
+    }
+}
+
 .manager-id-card {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
