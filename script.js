@@ -28,6 +28,7 @@ function safeDestroyChart(refName) {
 // Sample data for demonstration
 const sampleUsers = [
     { email: 'admin@dm2.com', password: 'admin123', role: 'admin', status: 'active' },
+    { email: 'owner@dm2.com', password: 'owner123', role: 'owner', status: 'active' },
     { email: 'manager@dm2.com', password: 'manager123', role: 'manager', status: 'active' },
     { email: 'praveen.kumar@invensis.net', password: 'praveen123', role: 'manager', status: 'active' },
     { email: 'tl@dm2.com', password: 'tl123', role: 'tl', status: 'active' }
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     loadProductionData();
                     break;
                 case 'manager':
+                case 'owner':
                     loadManagerData();
                     break;
             }
@@ -320,6 +322,9 @@ function checkExistingSession() {
                     case 'admin':
                         showPage('adminPage');
                         return;
+                    case 'owner':
+                        showPage('managerPage');
+                        return;
                     case 'manager':
                         showPage('managerPage');
                         return;
@@ -453,6 +458,10 @@ function handleLogin(e) {
             case 'admin':
                 showPage('adminPage');
                 break;
+            case 'owner':
+                // Owner has full access - redirect to manager page (or admin if preferred)
+                showPage('managerPage');
+                break;
             case 'manager':
                 showPage('managerPage');
                 break;
@@ -571,7 +580,7 @@ function toggleUserStatus(email) {
 
 // Manager Portal Functions
 function loadManagerPage() {
-    if (currentUser && currentUser.role === 'manager') {
+    if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'owner')) {
         document.getElementById('managerUserEmail').textContent = currentUser.email;
         
         // Load production data first
